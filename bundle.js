@@ -14476,7 +14476,7 @@
             }
         }
         onImgClick() {
-            window.open(`https://hanja.dict.naver.com/search?query=${encodeURIComponent(this.character)}`, '_blank');
+            window.open(`https://hangulhanja.com/hanja/${encodeURIComponent(this.hanja.t)}`, '_blank');
         }
         getRandomHanja() {
             return data[Math.floor(Math.random() * data.length - 1)];
