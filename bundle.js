@@ -13044,6 +13044,52 @@
     ], Icon);
 
     /**
+     * @license
+     * Copyright 2018 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    /**
+     * @fileoverview A "ponyfill" is a polyfill that doesn't modify the global prototype chain.
+     * This makes ponyfills safer than traditional polyfills, especially for libraries like MDC.
+     */
+    function closest(element, selector) {
+        if (element.closest) {
+            return element.closest(selector);
+        }
+        var el = element;
+        while (el) {
+            if (matches(el, selector)) {
+                return el;
+            }
+            el = el.parentElement;
+        }
+        return null;
+    }
+    function matches(element, selector) {
+        var nativeMatches = element.matches
+            || element.webkitMatchesSelector
+            || element.msMatchesSelector;
+        return nativeMatches.call(element, selector);
+    }
+
+    /**
     @license
     Copyright 2018 Google Inc. All Rights Reserved.
 
@@ -13059,6 +13105,36 @@
     See the License for the specific language governing permissions and
     limitations under the License.
     */
+    /**
+     * Determines whether a node is an element.
+     *
+     * @param node Node to check
+     */
+    const isNodeElement = (node) => {
+        return node.nodeType === Node.ELEMENT_NODE;
+    };
+    function findAssignedElement(slot, selector) {
+        for (const node of slot.assignedNodes({ flatten: true })) {
+            if (isNodeElement(node)) {
+                const el = node;
+                if (matches(el, selector)) {
+                    return el;
+                }
+            }
+        }
+        return null;
+    }
+    function addHasRemoveClass(element) {
+        return {
+            addClass: (className) => {
+                element.classList.add(className);
+            },
+            removeClass: (className) => {
+                element.classList.remove(className);
+            },
+            hasClass: (className) => element.classList.contains(className),
+        };
+    }
     const fn = () => { };
     const optionsBlock = {
         get passive() {
@@ -14447,74 +14523,3964 @@
         customElement('mwc-button')
     ], Button);
 
+    /** @soyCompatible */
+    class IconButtonBase extends LitElement {
+        constructor() {
+            super(...arguments);
+            this.disabled = false;
+            this.icon = '';
+            this.label = '';
+            this.shouldRenderRipple = false;
+            this.rippleHandlers = new RippleHandlers(() => {
+                this.shouldRenderRipple = true;
+                return this.ripple;
+            });
+        }
+        /** @soyTemplate */
+        renderRipple() {
+            return this.shouldRenderRipple ? html `
+            <mwc-ripple
+                .disabled="${this.disabled}"
+                unbounded>
+            </mwc-ripple>` :
+                '';
+        }
+        focus() {
+            const buttonElement = this.buttonElement;
+            if (buttonElement) {
+                this.rippleHandlers.startFocus();
+                buttonElement.focus();
+            }
+        }
+        blur() {
+            const buttonElement = this.buttonElement;
+            if (buttonElement) {
+                this.rippleHandlers.endFocus();
+                buttonElement.blur();
+            }
+        }
+        /** @soyTemplate */
+        render() {
+            return html `<button
+        class="mdc-icon-button"
+        aria-label="${this.label || this.icon}"
+        ?disabled="${this.disabled}"
+        @focus="${this.handleRippleFocus}"
+        @blur="${this.handleRippleBlur}"
+        @mousedown="${this.handleRippleMouseDown}"
+        @mouseenter="${this.handleRippleMouseEnter}"
+        @mouseleave="${this.handleRippleMouseLeave}"
+        @touchstart="${this.handleRippleTouchStart}"
+        @touchend="${this.handleRippleDeactivate}"
+        @touchcancel="${this.handleRippleDeactivate}">
+      ${this.renderRipple()}
+    <i class="material-icons">${this.icon}</i>
+    <span class="default-slot-container">
+        <slot></slot>
+    </span>
+  </button>`;
+        }
+        handleRippleMouseDown(event) {
+            const onUp = () => {
+                window.removeEventListener('mouseup', onUp);
+                this.handleRippleDeactivate();
+            };
+            window.addEventListener('mouseup', onUp);
+            this.rippleHandlers.startPress(event);
+        }
+        handleRippleTouchStart(event) {
+            this.rippleHandlers.startPress(event);
+        }
+        handleRippleDeactivate() {
+            this.rippleHandlers.endPress();
+        }
+        handleRippleMouseEnter() {
+            this.rippleHandlers.startHover();
+        }
+        handleRippleMouseLeave() {
+            this.rippleHandlers.endHover();
+        }
+        handleRippleFocus() {
+            this.rippleHandlers.startFocus();
+        }
+        handleRippleBlur() {
+            this.rippleHandlers.endFocus();
+        }
+    }
+    __decorate([
+        property({ type: Boolean, reflect: true })
+    ], IconButtonBase.prototype, "disabled", void 0);
+    __decorate([
+        property({ type: String })
+    ], IconButtonBase.prototype, "icon", void 0);
+    __decorate([
+        property({ type: String })
+    ], IconButtonBase.prototype, "label", void 0);
+    __decorate([
+        query('button')
+    ], IconButtonBase.prototype, "buttonElement", void 0);
+    __decorate([
+        queryAsync('mwc-ripple')
+    ], IconButtonBase.prototype, "ripple", void 0);
+    __decorate([
+        internalProperty()
+    ], IconButtonBase.prototype, "shouldRenderRipple", void 0);
+    __decorate([
+        eventOptions({ passive: true })
+    ], IconButtonBase.prototype, "handleRippleMouseDown", null);
+    __decorate([
+        eventOptions({ passive: true })
+    ], IconButtonBase.prototype, "handleRippleTouchStart", null);
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    const style$3 = css `.material-icons{font-family:var(--mdc-icon-font, "Material Icons");font-weight:normal;font-style:normal;font-size:var(--mdc-icon-size, 24px);line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale;font-feature-settings:"liga"}.mdc-icon-button{display:inline-block;position:relative;box-sizing:border-box;border:none;outline:none;background-color:transparent;fill:currentColor;color:inherit;font-size:24px;text-decoration:none;cursor:pointer;user-select:none;width:48px;height:48px;padding:12px}.mdc-icon-button svg,.mdc-icon-button img{width:24px;height:24px}.mdc-icon-button:disabled{color:rgba(0, 0, 0, 0.38);color:var(--mdc-theme-text-disabled-on-light, rgba(0, 0, 0, 0.38))}.mdc-icon-button:disabled{cursor:default;pointer-events:none}.mdc-icon-button__icon{display:inline-block}.mdc-icon-button__icon.mdc-icon-button__icon--on{display:none}.mdc-icon-button--on .mdc-icon-button__icon{display:none}.mdc-icon-button--on .mdc-icon-button__icon.mdc-icon-button__icon--on{display:inline-block}:host{display:inline-block;outline:none;--mdc-ripple-color: currentcolor;-webkit-tap-highlight-color:transparent}:host([disabled]){pointer-events:none}:host,.mdc-icon-button{vertical-align:top}.mdc-icon-button{width:var(--mdc-icon-button-size, 48px);height:var(--mdc-icon-button-size, 48px);padding:calc( (var(--mdc-icon-button-size, 48px) - var(--mdc-icon-size, 24px)) / 2 )}.mdc-icon-button>i{position:absolute;top:0;padding-top:inherit}.mdc-icon-button i,.mdc-icon-button svg,.mdc-icon-button img,.mdc-icon-button ::slotted(*){display:block;width:var(--mdc-icon-size, 24px);height:var(--mdc-icon-size, 24px)}`;
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    /** @soyCompatible */
+    let IconButton = class IconButton extends IconButtonBase {
+    };
+    IconButton.styles = style$3;
+    IconButton = __decorate([
+        customElement('mwc-icon-button')
+    ], IconButton);
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc. All rights reserved.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *     http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    (() => {
+        var _a, _b, _c;
+        /* Symbols for private properties */
+        const _blockingElements = Symbol();
+        const _alreadyInertElements = Symbol();
+        const _topElParents = Symbol();
+        const _siblingsToRestore = Symbol();
+        const _parentMO = Symbol();
+        /* Symbols for private static methods */
+        const _topChanged = Symbol();
+        const _swapInertedSibling = Symbol();
+        const _inertSiblings = Symbol();
+        const _restoreInertedSiblings = Symbol();
+        const _getParents = Symbol();
+        const _getDistributedChildren = Symbol();
+        const _isInertable = Symbol();
+        const _handleMutations = Symbol();
+        class BlockingElementsImpl {
+            constructor() {
+                /**
+                 * The blocking elements.
+                 */
+                this[_a] = [];
+                /**
+                 * Used to keep track of the parents of the top element, from the element
+                 * itself up to body. When top changes, the old top might have been removed
+                 * from the document, so we need to memoize the inerted parents' siblings
+                 * in order to restore their inerteness when top changes.
+                 */
+                this[_b] = [];
+                /**
+                 * Elements that are already inert before the first blocking element is
+                 * pushed.
+                 */
+                this[_c] = new Set();
+            }
+            destructor() {
+                // Restore original inertness.
+                this[_restoreInertedSiblings](this[_topElParents]);
+                // Note we don't want to make these properties nullable on the class,
+                // since then we'd need non-null casts in many places. Calling a method on
+                // a BlockingElements instance after calling destructor will result in an
+                // exception.
+                const nullable = this;
+                nullable[_blockingElements] = null;
+                nullable[_topElParents] = null;
+                nullable[_alreadyInertElements] = null;
+            }
+            get top() {
+                const elems = this[_blockingElements];
+                return elems[elems.length - 1] || null;
+            }
+            push(element) {
+                if (!element || element === this.top) {
+                    return;
+                }
+                // Remove it from the stack, we'll bring it to the top.
+                this.remove(element);
+                this[_topChanged](element);
+                this[_blockingElements].push(element);
+            }
+            remove(element) {
+                const i = this[_blockingElements].indexOf(element);
+                if (i === -1) {
+                    return false;
+                }
+                this[_blockingElements].splice(i, 1);
+                // Top changed only if the removed element was the top element.
+                if (i === this[_blockingElements].length) {
+                    this[_topChanged](this.top);
+                }
+                return true;
+            }
+            pop() {
+                const top = this.top;
+                top && this.remove(top);
+                return top;
+            }
+            has(element) {
+                return this[_blockingElements].indexOf(element) !== -1;
+            }
+            /**
+             * Sets `inert` to all document elements except the new top element, its
+             * parents, and its distributed content.
+             */
+            [(_a = _blockingElements, _b = _topElParents, _c = _alreadyInertElements, _topChanged)](newTop) {
+                const toKeepInert = this[_alreadyInertElements];
+                const oldParents = this[_topElParents];
+                // No new top, reset old top if any.
+                if (!newTop) {
+                    this[_restoreInertedSiblings](oldParents);
+                    toKeepInert.clear();
+                    this[_topElParents] = [];
+                    return;
+                }
+                const newParents = this[_getParents](newTop);
+                // New top is not contained in the main document!
+                if (newParents[newParents.length - 1].parentNode !== document.body) {
+                    throw Error('Non-connected element cannot be a blocking element');
+                }
+                // Cast here because we know we'll call _inertSiblings on newParents
+                // below.
+                this[_topElParents] = newParents;
+                const toSkip = this[_getDistributedChildren](newTop);
+                // No previous top element.
+                if (!oldParents.length) {
+                    this[_inertSiblings](newParents, toSkip, toKeepInert);
+                    return;
+                }
+                let i = oldParents.length - 1;
+                let j = newParents.length - 1;
+                // Find common parent. Index 0 is the element itself (so stop before it).
+                while (i > 0 && j > 0 && oldParents[i] === newParents[j]) {
+                    i--;
+                    j--;
+                }
+                // If up the parents tree there are 2 elements that are siblings, swap
+                // the inerted sibling.
+                if (oldParents[i] !== newParents[j]) {
+                    this[_swapInertedSibling](oldParents[i], newParents[j]);
+                }
+                // Restore old parents siblings inertness.
+                i > 0 && this[_restoreInertedSiblings](oldParents.slice(0, i));
+                // Make new parents siblings inert.
+                j > 0 && this[_inertSiblings](newParents.slice(0, j), toSkip, null);
+            }
+            /**
+             * Swaps inertness between two sibling elements.
+             * Sets the property `inert` over the attribute since the inert spec
+             * doesn't specify if it should be reflected.
+             * https://html.spec.whatwg.org/multipage/interaction.html#inert
+             */
+            [_swapInertedSibling](oldInert, newInert) {
+                const siblingsToRestore = oldInert[_siblingsToRestore];
+                // oldInert is not contained in siblings to restore, so we have to check
+                // if it's inertable and if already inert.
+                if (this[_isInertable](oldInert) && !oldInert.inert) {
+                    oldInert.inert = true;
+                    siblingsToRestore.add(oldInert);
+                }
+                // If newInert was already between the siblings to restore, it means it is
+                // inertable and must be restored.
+                if (siblingsToRestore.has(newInert)) {
+                    newInert.inert = false;
+                    siblingsToRestore.delete(newInert);
+                }
+                newInert[_parentMO] = oldInert[_parentMO];
+                newInert[_siblingsToRestore] = siblingsToRestore;
+                oldInert[_parentMO] = undefined;
+                oldInert[_siblingsToRestore] = undefined;
+            }
+            /**
+             * Restores original inertness to the siblings of the elements.
+             * Sets the property `inert` over the attribute since the inert spec
+             * doesn't specify if it should be reflected.
+             * https://html.spec.whatwg.org/multipage/interaction.html#inert
+             */
+            [_restoreInertedSiblings](elements) {
+                for (const element of elements) {
+                    const mo = element[_parentMO];
+                    mo.disconnect();
+                    element[_parentMO] = undefined;
+                    const siblings = element[_siblingsToRestore];
+                    for (const sibling of siblings) {
+                        sibling.inert = false;
+                    }
+                    element[_siblingsToRestore] = undefined;
+                }
+            }
+            /**
+             * Inerts the siblings of the elements except the elements to skip. Stores
+             * the inerted siblings into the element's symbol `_siblingsToRestore`.
+             * Pass `toKeepInert` to collect the already inert elements.
+             * Sets the property `inert` over the attribute since the inert spec
+             * doesn't specify if it should be reflected.
+             * https://html.spec.whatwg.org/multipage/interaction.html#inert
+             */
+            [_inertSiblings](elements, toSkip, toKeepInert) {
+                for (const element of elements) {
+                    // Assume element is not a Document, so it must have a parentNode.
+                    const parent = element.parentNode;
+                    const children = parent.children;
+                    const inertedSiblings = new Set();
+                    for (let j = 0; j < children.length; j++) {
+                        const sibling = children[j];
+                        // Skip the input element, if not inertable or to be skipped.
+                        if (sibling === element || !this[_isInertable](sibling) ||
+                            (toSkip && toSkip.has(sibling))) {
+                            continue;
+                        }
+                        // Should be collected since already inerted.
+                        if (toKeepInert && sibling.inert) {
+                            toKeepInert.add(sibling);
+                        }
+                        else {
+                            sibling.inert = true;
+                            inertedSiblings.add(sibling);
+                        }
+                    }
+                    // Store the siblings that were inerted.
+                    element[_siblingsToRestore] = inertedSiblings;
+                    // Observe only immediate children mutations on the parent.
+                    const mo = new MutationObserver(this[_handleMutations].bind(this));
+                    element[_parentMO] = mo;
+                    let parentToObserve = parent;
+                    // If we're using the ShadyDOM polyfill, then our parent could be a
+                    // shady root, which is an object that acts like a ShadowRoot, but isn't
+                    // actually a node in the real DOM. Observe the real DOM parent instead.
+                    const maybeShadyRoot = parentToObserve;
+                    if (maybeShadyRoot.__shady && maybeShadyRoot.host) {
+                        parentToObserve = maybeShadyRoot.host;
+                    }
+                    mo.observe(parentToObserve, {
+                        childList: true,
+                    });
+                }
+            }
+            /**
+             * Handles newly added/removed nodes by toggling their inertness.
+             * It also checks if the current top Blocking Element has been removed,
+             * notifying and removing it.
+             */
+            [_handleMutations](mutations) {
+                const parents = this[_topElParents];
+                const toKeepInert = this[_alreadyInertElements];
+                for (const mutation of mutations) {
+                    // If the target is a shadowRoot, get its host as we skip shadowRoots when
+                    // computing _topElParents.
+                    const target = mutation.target.host || mutation.target;
+                    const idx = target === document.body ?
+                        parents.length :
+                        parents.indexOf(target);
+                    const inertedChild = parents[idx - 1];
+                    const inertedSiblings = inertedChild[_siblingsToRestore];
+                    // To restore.
+                    for (let i = 0; i < mutation.removedNodes.length; i++) {
+                        const sibling = mutation.removedNodes[i];
+                        if (sibling === inertedChild) {
+                            console.info('Detected removal of the top Blocking Element.');
+                            this.pop();
+                            return;
+                        }
+                        if (inertedSiblings.has(sibling)) {
+                            sibling.inert = false;
+                            inertedSiblings.delete(sibling);
+                        }
+                    }
+                    // To inert.
+                    for (let i = 0; i < mutation.addedNodes.length; i++) {
+                        const sibling = mutation.addedNodes[i];
+                        if (!this[_isInertable](sibling)) {
+                            continue;
+                        }
+                        if (toKeepInert && sibling.inert) {
+                            toKeepInert.add(sibling);
+                        }
+                        else {
+                            sibling.inert = true;
+                            inertedSiblings.add(sibling);
+                        }
+                    }
+                }
+            }
+            /**
+             * Returns if the element is inertable.
+             */
+            [_isInertable](element) {
+                return false === /^(style|template|script)$/.test(element.localName);
+            }
+            /**
+             * Returns the list of newParents of an element, starting from element
+             * (included) up to `document.body` (excluded).
+             */
+            [_getParents](element) {
+                const parents = [];
+                let current = element;
+                // Stop to body.
+                while (current && current !== document.body) {
+                    // Skip shadow roots.
+                    if (current.nodeType === Node.ELEMENT_NODE) {
+                        parents.push(current);
+                    }
+                    // ShadowDom v1
+                    if (current.assignedSlot) {
+                        // Collect slots from deepest slot to top.
+                        while (current = current.assignedSlot) {
+                            parents.push(current);
+                        }
+                        // Continue the search on the top slot.
+                        current = parents.pop();
+                        continue;
+                    }
+                    current = current.parentNode ||
+                        current.host;
+                }
+                return parents;
+            }
+            /**
+             * Returns the distributed children of the element's shadow root.
+             * Returns null if the element doesn't have a shadow root.
+             */
+            [_getDistributedChildren](element) {
+                const shadowRoot = element.shadowRoot;
+                if (!shadowRoot) {
+                    return null;
+                }
+                const result = new Set();
+                let i;
+                let j;
+                let nodes;
+                const slots = shadowRoot.querySelectorAll('slot');
+                if (slots.length && slots[0].assignedNodes) {
+                    for (i = 0; i < slots.length; i++) {
+                        nodes = slots[i].assignedNodes({
+                            flatten: true,
+                        });
+                        for (j = 0; j < nodes.length; j++) {
+                            if (nodes[j].nodeType === Node.ELEMENT_NODE) {
+                                result.add(nodes[j]);
+                            }
+                        }
+                    }
+                    // No need to search for <content>.
+                }
+                return result;
+            }
+        }
+        document.$blockingElements =
+            new BlockingElementsImpl();
+    })();
+
+    var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+    function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+    /**
+     * This work is licensed under the W3C Software and Document License
+     * (http://www.w3.org/Consortium/Legal/2015/copyright-software-and-document).
+     */
+
+    (function () {
+      // Return early if we're not running inside of the browser.
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      // Convenience function for converting NodeLists.
+      /** @type {typeof Array.prototype.slice} */
+      var slice = Array.prototype.slice;
+
+      /**
+       * IE has a non-standard name for "matches".
+       * @type {typeof Element.prototype.matches}
+       */
+      var matches = Element.prototype.matches || Element.prototype.msMatchesSelector;
+
+      /** @type {string} */
+      var _focusableElementsString = ['a[href]', 'area[href]', 'input:not([disabled])', 'select:not([disabled])', 'textarea:not([disabled])', 'button:not([disabled])', 'details', 'summary', 'iframe', 'object', 'embed', '[contenteditable]'].join(',');
+
+      /**
+       * `InertRoot` manages a single inert subtree, i.e. a DOM subtree whose root element has an `inert`
+       * attribute.
+       *
+       * Its main functions are:
+       *
+       * - to create and maintain a set of managed `InertNode`s, including when mutations occur in the
+       *   subtree. The `makeSubtreeUnfocusable()` method handles collecting `InertNode`s via registering
+       *   each focusable node in the subtree with the singleton `InertManager` which manages all known
+       *   focusable nodes within inert subtrees. `InertManager` ensures that a single `InertNode`
+       *   instance exists for each focusable node which has at least one inert root as an ancestor.
+       *
+       * - to notify all managed `InertNode`s when this subtree stops being inert (i.e. when the `inert`
+       *   attribute is removed from the root node). This is handled in the destructor, which calls the
+       *   `deregister` method on `InertManager` for each managed inert node.
+       */
+
+      var InertRoot = function () {
+        /**
+         * @param {!Element} rootElement The Element at the root of the inert subtree.
+         * @param {!InertManager} inertManager The global singleton InertManager object.
+         */
+        function InertRoot(rootElement, inertManager) {
+          _classCallCheck(this, InertRoot);
+
+          /** @type {!InertManager} */
+          this._inertManager = inertManager;
+
+          /** @type {!Element} */
+          this._rootElement = rootElement;
+
+          /**
+           * @type {!Set<!InertNode>}
+           * All managed focusable nodes in this InertRoot's subtree.
+           */
+          this._managedNodes = new Set();
+
+          // Make the subtree hidden from assistive technology
+          if (this._rootElement.hasAttribute('aria-hidden')) {
+            /** @type {?string} */
+            this._savedAriaHidden = this._rootElement.getAttribute('aria-hidden');
+          } else {
+            this._savedAriaHidden = null;
+          }
+          this._rootElement.setAttribute('aria-hidden', 'true');
+
+          // Make all focusable elements in the subtree unfocusable and add them to _managedNodes
+          this._makeSubtreeUnfocusable(this._rootElement);
+
+          // Watch for:
+          // - any additions in the subtree: make them unfocusable too
+          // - any removals from the subtree: remove them from this inert root's managed nodes
+          // - attribute changes: if `tabindex` is added, or removed from an intrinsically focusable
+          //   element, make that node a managed node.
+          this._observer = new MutationObserver(this._onMutation.bind(this));
+          this._observer.observe(this._rootElement, { attributes: true, childList: true, subtree: true });
+        }
+
+        /**
+         * Call this whenever this object is about to become obsolete.  This unwinds all of the state
+         * stored in this object and updates the state of all of the managed nodes.
+         */
+
+
+        _createClass(InertRoot, [{
+          key: 'destructor',
+          value: function destructor() {
+            this._observer.disconnect();
+
+            if (this._rootElement) {
+              if (this._savedAriaHidden !== null) {
+                this._rootElement.setAttribute('aria-hidden', this._savedAriaHidden);
+              } else {
+                this._rootElement.removeAttribute('aria-hidden');
+              }
+            }
+
+            this._managedNodes.forEach(function (inertNode) {
+              this._unmanageNode(inertNode.node);
+            }, this);
+
+            // Note we cast the nulls to the ANY type here because:
+            // 1) We want the class properties to be declared as non-null, or else we
+            //    need even more casts throughout this code. All bets are off if an
+            //    instance has been destroyed and a method is called.
+            // 2) We don't want to cast "this", because we want type-aware optimizations
+            //    to know which properties we're setting.
+            this._observer = /** @type {?} */null;
+            this._rootElement = /** @type {?} */null;
+            this._managedNodes = /** @type {?} */null;
+            this._inertManager = /** @type {?} */null;
+          }
+
+          /**
+           * @return {!Set<!InertNode>} A copy of this InertRoot's managed nodes set.
+           */
+
+        }, {
+          key: '_makeSubtreeUnfocusable',
+
+
+          /**
+           * @param {!Node} startNode
+           */
+          value: function _makeSubtreeUnfocusable(startNode) {
+            var _this2 = this;
+
+            composedTreeWalk(startNode, function (node) {
+              return _this2._visitNode(node);
+            });
+
+            var activeElement = document.activeElement;
+
+            if (!document.body.contains(startNode)) {
+              // startNode may be in shadow DOM, so find its nearest shadowRoot to get the activeElement.
+              var node = startNode;
+              /** @type {!ShadowRoot|undefined} */
+              var root = undefined;
+              while (node) {
+                if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                  root = /** @type {!ShadowRoot} */node;
+                  break;
+                }
+                node = node.parentNode;
+              }
+              if (root) {
+                activeElement = root.activeElement;
+              }
+            }
+            if (startNode.contains(activeElement)) {
+              activeElement.blur();
+              // In IE11, if an element is already focused, and then set to tabindex=-1
+              // calling blur() will not actually move the focus.
+              // To work around this we call focus() on the body instead.
+              if (activeElement === document.activeElement) {
+                document.body.focus();
+              }
+            }
+          }
+
+          /**
+           * @param {!Node} node
+           */
+
+        }, {
+          key: '_visitNode',
+          value: function _visitNode(node) {
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+              return;
+            }
+            var element = /** @type {!Element} */node;
+
+            // If a descendant inert root becomes un-inert, its descendants will still be inert because of
+            // this inert root, so all of its managed nodes need to be adopted by this InertRoot.
+            if (element !== this._rootElement && element.hasAttribute('inert')) {
+              this._adoptInertRoot(element);
+            }
+
+            if (matches.call(element, _focusableElementsString) || element.hasAttribute('tabindex')) {
+              this._manageNode(element);
+            }
+          }
+
+          /**
+           * Register the given node with this InertRoot and with InertManager.
+           * @param {!Node} node
+           */
+
+        }, {
+          key: '_manageNode',
+          value: function _manageNode(node) {
+            var inertNode = this._inertManager.register(node, this);
+            this._managedNodes.add(inertNode);
+          }
+
+          /**
+           * Unregister the given node with this InertRoot and with InertManager.
+           * @param {!Node} node
+           */
+
+        }, {
+          key: '_unmanageNode',
+          value: function _unmanageNode(node) {
+            var inertNode = this._inertManager.deregister(node, this);
+            if (inertNode) {
+              this._managedNodes['delete'](inertNode);
+            }
+          }
+
+          /**
+           * Unregister the entire subtree starting at `startNode`.
+           * @param {!Node} startNode
+           */
+
+        }, {
+          key: '_unmanageSubtree',
+          value: function _unmanageSubtree(startNode) {
+            var _this3 = this;
+
+            composedTreeWalk(startNode, function (node) {
+              return _this3._unmanageNode(node);
+            });
+          }
+
+          /**
+           * If a descendant node is found with an `inert` attribute, adopt its managed nodes.
+           * @param {!Element} node
+           */
+
+        }, {
+          key: '_adoptInertRoot',
+          value: function _adoptInertRoot(node) {
+            var inertSubroot = this._inertManager.getInertRoot(node);
+
+            // During initialisation this inert root may not have been registered yet,
+            // so register it now if need be.
+            if (!inertSubroot) {
+              this._inertManager.setInert(node, true);
+              inertSubroot = this._inertManager.getInertRoot(node);
+            }
+
+            inertSubroot.managedNodes.forEach(function (savedInertNode) {
+              this._manageNode(savedInertNode.node);
+            }, this);
+          }
+
+          /**
+           * Callback used when mutation observer detects subtree additions, removals, or attribute changes.
+           * @param {!Array<!MutationRecord>} records
+           * @param {!MutationObserver} self
+           */
+
+        }, {
+          key: '_onMutation',
+          value: function _onMutation(records, self) {
+            records.forEach(function (record) {
+              var target = /** @type {!Element} */record.target;
+              if (record.type === 'childList') {
+                // Manage added nodes
+                slice.call(record.addedNodes).forEach(function (node) {
+                  this._makeSubtreeUnfocusable(node);
+                }, this);
+
+                // Un-manage removed nodes
+                slice.call(record.removedNodes).forEach(function (node) {
+                  this._unmanageSubtree(node);
+                }, this);
+              } else if (record.type === 'attributes') {
+                if (record.attributeName === 'tabindex') {
+                  // Re-initialise inert node if tabindex changes
+                  this._manageNode(target);
+                } else if (target !== this._rootElement && record.attributeName === 'inert' && target.hasAttribute('inert')) {
+                  // If a new inert root is added, adopt its managed nodes and make sure it knows about the
+                  // already managed nodes from this inert subroot.
+                  this._adoptInertRoot(target);
+                  var inertSubroot = this._inertManager.getInertRoot(target);
+                  this._managedNodes.forEach(function (managedNode) {
+                    if (target.contains(managedNode.node)) {
+                      inertSubroot._manageNode(managedNode.node);
+                    }
+                  });
+                }
+              }
+            }, this);
+          }
+        }, {
+          key: 'managedNodes',
+          get: function get() {
+            return new Set(this._managedNodes);
+          }
+
+          /** @return {boolean} */
+
+        }, {
+          key: 'hasSavedAriaHidden',
+          get: function get() {
+            return this._savedAriaHidden !== null;
+          }
+
+          /** @param {?string} ariaHidden */
+
+        }, {
+          key: 'savedAriaHidden',
+          set: function set(ariaHidden) {
+            this._savedAriaHidden = ariaHidden;
+          }
+
+          /** @return {?string} */
+          ,
+          get: function get() {
+            return this._savedAriaHidden;
+          }
+        }]);
+
+        return InertRoot;
+      }();
+
+      /**
+       * `InertNode` initialises and manages a single inert node.
+       * A node is inert if it is a descendant of one or more inert root elements.
+       *
+       * On construction, `InertNode` saves the existing `tabindex` value for the node, if any, and
+       * either removes the `tabindex` attribute or sets it to `-1`, depending on whether the element
+       * is intrinsically focusable or not.
+       *
+       * `InertNode` maintains a set of `InertRoot`s which are descendants of this `InertNode`. When an
+       * `InertRoot` is destroyed, and calls `InertManager.deregister()`, the `InertManager` notifies the
+       * `InertNode` via `removeInertRoot()`, which in turn destroys the `InertNode` if no `InertRoot`s
+       * remain in the set. On destruction, `InertNode` reinstates the stored `tabindex` if one exists,
+       * or removes the `tabindex` attribute if the element is intrinsically focusable.
+       */
+
+
+      var InertNode = function () {
+        /**
+         * @param {!Node} node A focusable element to be made inert.
+         * @param {!InertRoot} inertRoot The inert root element associated with this inert node.
+         */
+        function InertNode(node, inertRoot) {
+          _classCallCheck(this, InertNode);
+
+          /** @type {!Node} */
+          this._node = node;
+
+          /** @type {boolean} */
+          this._overrodeFocusMethod = false;
+
+          /**
+           * @type {!Set<!InertRoot>} The set of descendant inert roots.
+           *    If and only if this set becomes empty, this node is no longer inert.
+           */
+          this._inertRoots = new Set([inertRoot]);
+
+          /** @type {?number} */
+          this._savedTabIndex = null;
+
+          /** @type {boolean} */
+          this._destroyed = false;
+
+          // Save any prior tabindex info and make this node untabbable
+          this.ensureUntabbable();
+        }
+
+        /**
+         * Call this whenever this object is about to become obsolete.
+         * This makes the managed node focusable again and deletes all of the previously stored state.
+         */
+
+
+        _createClass(InertNode, [{
+          key: 'destructor',
+          value: function destructor() {
+            this._throwIfDestroyed();
+
+            if (this._node && this._node.nodeType === Node.ELEMENT_NODE) {
+              var element = /** @type {!Element} */this._node;
+              if (this._savedTabIndex !== null) {
+                element.setAttribute('tabindex', this._savedTabIndex);
+              } else {
+                element.removeAttribute('tabindex');
+              }
+
+              // Use `delete` to restore native focus method.
+              if (this._overrodeFocusMethod) {
+                delete element.focus;
+              }
+            }
+
+            // See note in InertRoot.destructor for why we cast these nulls to ANY.
+            this._node = /** @type {?} */null;
+            this._inertRoots = /** @type {?} */null;
+            this._destroyed = true;
+          }
+
+          /**
+           * @type {boolean} Whether this object is obsolete because the managed node is no longer inert.
+           * If the object has been destroyed, any attempt to access it will cause an exception.
+           */
+
+        }, {
+          key: '_throwIfDestroyed',
+
+
+          /**
+           * Throw if user tries to access destroyed InertNode.
+           */
+          value: function _throwIfDestroyed() {
+            if (this.destroyed) {
+              throw new Error('Trying to access destroyed InertNode');
+            }
+          }
+
+          /** @return {boolean} */
+
+        }, {
+          key: 'ensureUntabbable',
+
+
+          /** Save the existing tabindex value and make the node untabbable and unfocusable */
+          value: function ensureUntabbable() {
+            if (this.node.nodeType !== Node.ELEMENT_NODE) {
+              return;
+            }
+            var element = /** @type {!Element} */this.node;
+            if (matches.call(element, _focusableElementsString)) {
+              if ( /** @type {!HTMLElement} */element.tabIndex === -1 && this.hasSavedTabIndex) {
+                return;
+              }
+
+              if (element.hasAttribute('tabindex')) {
+                this._savedTabIndex = /** @type {!HTMLElement} */element.tabIndex;
+              }
+              element.setAttribute('tabindex', '-1');
+              if (element.nodeType === Node.ELEMENT_NODE) {
+                element.focus = function () {};
+                this._overrodeFocusMethod = true;
+              }
+            } else if (element.hasAttribute('tabindex')) {
+              this._savedTabIndex = /** @type {!HTMLElement} */element.tabIndex;
+              element.removeAttribute('tabindex');
+            }
+          }
+
+          /**
+           * Add another inert root to this inert node's set of managing inert roots.
+           * @param {!InertRoot} inertRoot
+           */
+
+        }, {
+          key: 'addInertRoot',
+          value: function addInertRoot(inertRoot) {
+            this._throwIfDestroyed();
+            this._inertRoots.add(inertRoot);
+          }
+
+          /**
+           * Remove the given inert root from this inert node's set of managing inert roots.
+           * If the set of managing inert roots becomes empty, this node is no longer inert,
+           * so the object should be destroyed.
+           * @param {!InertRoot} inertRoot
+           */
+
+        }, {
+          key: 'removeInertRoot',
+          value: function removeInertRoot(inertRoot) {
+            this._throwIfDestroyed();
+            this._inertRoots['delete'](inertRoot);
+            if (this._inertRoots.size === 0) {
+              this.destructor();
+            }
+          }
+        }, {
+          key: 'destroyed',
+          get: function get() {
+            return (/** @type {!InertNode} */this._destroyed
+            );
+          }
+        }, {
+          key: 'hasSavedTabIndex',
+          get: function get() {
+            return this._savedTabIndex !== null;
+          }
+
+          /** @return {!Node} */
+
+        }, {
+          key: 'node',
+          get: function get() {
+            this._throwIfDestroyed();
+            return this._node;
+          }
+
+          /** @param {?number} tabIndex */
+
+        }, {
+          key: 'savedTabIndex',
+          set: function set(tabIndex) {
+            this._throwIfDestroyed();
+            this._savedTabIndex = tabIndex;
+          }
+
+          /** @return {?number} */
+          ,
+          get: function get() {
+            this._throwIfDestroyed();
+            return this._savedTabIndex;
+          }
+        }]);
+
+        return InertNode;
+      }();
+
+      /**
+       * InertManager is a per-document singleton object which manages all inert roots and nodes.
+       *
+       * When an element becomes an inert root by having an `inert` attribute set and/or its `inert`
+       * property set to `true`, the `setInert` method creates an `InertRoot` object for the element.
+       * The `InertRoot` in turn registers itself as managing all of the element's focusable descendant
+       * nodes via the `register()` method. The `InertManager` ensures that a single `InertNode` instance
+       * is created for each such node, via the `_managedNodes` map.
+       */
+
+
+      var InertManager = function () {
+        /**
+         * @param {!Document} document
+         */
+        function InertManager(document) {
+          _classCallCheck(this, InertManager);
+
+          if (!document) {
+            throw new Error('Missing required argument; InertManager needs to wrap a document.');
+          }
+
+          /** @type {!Document} */
+          this._document = document;
+
+          /**
+           * All managed nodes known to this InertManager. In a map to allow looking up by Node.
+           * @type {!Map<!Node, !InertNode>}
+           */
+          this._managedNodes = new Map();
+
+          /**
+           * All inert roots known to this InertManager. In a map to allow looking up by Node.
+           * @type {!Map<!Node, !InertRoot>}
+           */
+          this._inertRoots = new Map();
+
+          /**
+           * Observer for mutations on `document.body`.
+           * @type {!MutationObserver}
+           */
+          this._observer = new MutationObserver(this._watchForInert.bind(this));
+
+          // Add inert style.
+          addInertStyle(document.head || document.body || document.documentElement);
+
+          // Wait for document to be loaded.
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', this._onDocumentLoaded.bind(this));
+          } else {
+            this._onDocumentLoaded();
+          }
+        }
+
+        /**
+         * Set whether the given element should be an inert root or not.
+         * @param {!Element} root
+         * @param {boolean} inert
+         */
+
+
+        _createClass(InertManager, [{
+          key: 'setInert',
+          value: function setInert(root, inert) {
+            if (inert) {
+              if (this._inertRoots.has(root)) {
+                // element is already inert
+                return;
+              }
+
+              var inertRoot = new InertRoot(root, this);
+              root.setAttribute('inert', '');
+              this._inertRoots.set(root, inertRoot);
+              // If not contained in the document, it must be in a shadowRoot.
+              // Ensure inert styles are added there.
+              if (!this._document.body.contains(root)) {
+                var parent = root.parentNode;
+                while (parent) {
+                  if (parent.nodeType === 11) {
+                    addInertStyle(parent);
+                  }
+                  parent = parent.parentNode;
+                }
+              }
+            } else {
+              if (!this._inertRoots.has(root)) {
+                // element is already non-inert
+                return;
+              }
+
+              var _inertRoot = this._inertRoots.get(root);
+              _inertRoot.destructor();
+              this._inertRoots['delete'](root);
+              root.removeAttribute('inert');
+            }
+          }
+
+          /**
+           * Get the InertRoot object corresponding to the given inert root element, if any.
+           * @param {!Node} element
+           * @return {!InertRoot|undefined}
+           */
+
+        }, {
+          key: 'getInertRoot',
+          value: function getInertRoot(element) {
+            return this._inertRoots.get(element);
+          }
+
+          /**
+           * Register the given InertRoot as managing the given node.
+           * In the case where the node has a previously existing inert root, this inert root will
+           * be added to its set of inert roots.
+           * @param {!Node} node
+           * @param {!InertRoot} inertRoot
+           * @return {!InertNode} inertNode
+           */
+
+        }, {
+          key: 'register',
+          value: function register(node, inertRoot) {
+            var inertNode = this._managedNodes.get(node);
+            if (inertNode !== undefined) {
+              // node was already in an inert subtree
+              inertNode.addInertRoot(inertRoot);
+            } else {
+              inertNode = new InertNode(node, inertRoot);
+            }
+
+            this._managedNodes.set(node, inertNode);
+
+            return inertNode;
+          }
+
+          /**
+           * De-register the given InertRoot as managing the given inert node.
+           * Removes the inert root from the InertNode's set of managing inert roots, and remove the inert
+           * node from the InertManager's set of managed nodes if it is destroyed.
+           * If the node is not currently managed, this is essentially a no-op.
+           * @param {!Node} node
+           * @param {!InertRoot} inertRoot
+           * @return {?InertNode} The potentially destroyed InertNode associated with this node, if any.
+           */
+
+        }, {
+          key: 'deregister',
+          value: function deregister(node, inertRoot) {
+            var inertNode = this._managedNodes.get(node);
+            if (!inertNode) {
+              return null;
+            }
+
+            inertNode.removeInertRoot(inertRoot);
+            if (inertNode.destroyed) {
+              this._managedNodes['delete'](node);
+            }
+
+            return inertNode;
+          }
+
+          /**
+           * Callback used when document has finished loading.
+           */
+
+        }, {
+          key: '_onDocumentLoaded',
+          value: function _onDocumentLoaded() {
+            // Find all inert roots in document and make them actually inert.
+            var inertElements = slice.call(this._document.querySelectorAll('[inert]'));
+            inertElements.forEach(function (inertElement) {
+              this.setInert(inertElement, true);
+            }, this);
+
+            // Comment this out to use programmatic API only.
+            this._observer.observe(this._document.body || this._document.documentElement, { attributes: true, subtree: true, childList: true });
+          }
+
+          /**
+           * Callback used when mutation observer detects attribute changes.
+           * @param {!Array<!MutationRecord>} records
+           * @param {!MutationObserver} self
+           */
+
+        }, {
+          key: '_watchForInert',
+          value: function _watchForInert(records, self) {
+            var _this = this;
+            records.forEach(function (record) {
+              switch (record.type) {
+                case 'childList':
+                  slice.call(record.addedNodes).forEach(function (node) {
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                      return;
+                    }
+                    var inertElements = slice.call(node.querySelectorAll('[inert]'));
+                    if (matches.call(node, '[inert]')) {
+                      inertElements.unshift(node);
+                    }
+                    inertElements.forEach(function (inertElement) {
+                      this.setInert(inertElement, true);
+                    }, _this);
+                  }, _this);
+                  break;
+                case 'attributes':
+                  if (record.attributeName !== 'inert') {
+                    return;
+                  }
+                  var target = /** @type {!Element} */record.target;
+                  var inert = target.hasAttribute('inert');
+                  _this.setInert(target, inert);
+                  break;
+              }
+            }, this);
+          }
+        }]);
+
+        return InertManager;
+      }();
+
+      /**
+       * Recursively walk the composed tree from |node|.
+       * @param {!Node} node
+       * @param {(function (!Element))=} callback Callback to be called for each element traversed,
+       *     before descending into child nodes.
+       * @param {?ShadowRoot=} shadowRootAncestor The nearest ShadowRoot ancestor, if any.
+       */
+
+
+      function composedTreeWalk(node, callback, shadowRootAncestor) {
+        if (node.nodeType == Node.ELEMENT_NODE) {
+          var element = /** @type {!Element} */node;
+          if (callback) {
+            callback(element);
+          }
+
+          // Descend into node:
+          // If it has a ShadowRoot, ignore all child elements - these will be picked
+          // up by the <content> or <shadow> elements. Descend straight into the
+          // ShadowRoot.
+          var shadowRoot = /** @type {!HTMLElement} */element.shadowRoot;
+          if (shadowRoot) {
+            composedTreeWalk(shadowRoot, callback);
+            return;
+          }
+
+          // If it is a <content> element, descend into distributed elements - these
+          // are elements from outside the shadow root which are rendered inside the
+          // shadow DOM.
+          if (element.localName == 'content') {
+            var content = /** @type {!HTMLContentElement} */element;
+            // Verifies if ShadowDom v0 is supported.
+            var distributedNodes = content.getDistributedNodes ? content.getDistributedNodes() : [];
+            for (var i = 0; i < distributedNodes.length; i++) {
+              composedTreeWalk(distributedNodes[i], callback);
+            }
+            return;
+          }
+
+          // If it is a <slot> element, descend into assigned nodes - these
+          // are elements from outside the shadow root which are rendered inside the
+          // shadow DOM.
+          if (element.localName == 'slot') {
+            var slot = /** @type {!HTMLSlotElement} */element;
+            // Verify if ShadowDom v1 is supported.
+            var _distributedNodes = slot.assignedNodes ? slot.assignedNodes({ flatten: true }) : [];
+            for (var _i = 0; _i < _distributedNodes.length; _i++) {
+              composedTreeWalk(_distributedNodes[_i], callback);
+            }
+            return;
+          }
+        }
+
+        // If it is neither the parent of a ShadowRoot, a <content> element, a <slot>
+        // element, nor a <shadow> element recurse normally.
+        var child = node.firstChild;
+        while (child != null) {
+          composedTreeWalk(child, callback);
+          child = child.nextSibling;
+        }
+      }
+
+      /**
+       * Adds a style element to the node containing the inert specific styles
+       * @param {!Node} node
+       */
+      function addInertStyle(node) {
+        if (node.querySelector('style#inert-style, link#inert-style')) {
+          return;
+        }
+        var style = document.createElement('style');
+        style.setAttribute('id', 'inert-style');
+        style.textContent = '\n' + '[inert] {\n' + '  pointer-events: none;\n' + '  cursor: default;\n' + '}\n' + '\n' + '[inert], [inert] * {\n' + '  -webkit-user-select: none;\n' + '  -moz-user-select: none;\n' + '  -ms-user-select: none;\n' + '  user-select: none;\n' + '}\n';
+        node.appendChild(style);
+      }
+
+      /** @type {!InertManager} */
+      var inertManager = new InertManager(document);
+
+      if (!Element.prototype.hasOwnProperty('inert')) {
+        Object.defineProperty(Element.prototype, 'inert', {
+          enumerable: true,
+          /** @this {!Element} */
+          get: function get() {
+            return this.hasAttribute('inert');
+          },
+          /** @this {!Element} */
+          set: function set(inert) {
+            inertManager.setInert(this, inert);
+          }
+        });
+      }
+    })();
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var cssClasses$1 = {
+        CLOSING: 'mdc-dialog--closing',
+        OPEN: 'mdc-dialog--open',
+        OPENING: 'mdc-dialog--opening',
+        SCROLLABLE: 'mdc-dialog--scrollable',
+        SCROLL_LOCK: 'mdc-dialog-scroll-lock',
+        STACKED: 'mdc-dialog--stacked',
+    };
+    var strings$1 = {
+        ACTION_ATTRIBUTE: 'data-mdc-dialog-action',
+        BUTTON_DEFAULT_ATTRIBUTE: 'data-mdc-dialog-button-default',
+        BUTTON_SELECTOR: '.mdc-dialog__button',
+        CLOSED_EVENT: 'MDCDialog:closed',
+        CLOSE_ACTION: 'close',
+        CLOSING_EVENT: 'MDCDialog:closing',
+        CONTAINER_SELECTOR: '.mdc-dialog__container',
+        CONTENT_SELECTOR: '.mdc-dialog__content',
+        DESTROY_ACTION: 'destroy',
+        INITIAL_FOCUS_ATTRIBUTE: 'data-mdc-dialog-initial-focus',
+        OPENED_EVENT: 'MDCDialog:opened',
+        OPENING_EVENT: 'MDCDialog:opening',
+        SCRIM_SELECTOR: '.mdc-dialog__scrim',
+        SUPPRESS_DEFAULT_PRESS_SELECTOR: [
+            'textarea',
+            '.mdc-menu .mdc-list-item',
+        ].join(', '),
+        SURFACE_SELECTOR: '.mdc-dialog__surface',
+    };
+    var numbers$1 = {
+        DIALOG_ANIMATION_CLOSE_TIME_MS: 75,
+        DIALOG_ANIMATION_OPEN_TIME_MS: 150,
+    };
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+    /* global Reflect, Promise */
+
+    var extendStatics$1 = function(d, b) {
+        extendStatics$1 = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics$1(d, b);
+    };
+
+    function __extends$1(d, b) {
+        extendStatics$1(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    }
+
+    var __assign$1 = function() {
+        __assign$1 = Object.assign || function __assign(t) {
+            for (var s, i = 1, n = arguments.length; i < n; i++) {
+                s = arguments[i];
+                for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+            }
+            return t;
+        };
+        return __assign$1.apply(this, arguments);
+    };
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCDialogFoundation = /** @class */ (function (_super) {
+        __extends$1(MDCDialogFoundation, _super);
+        function MDCDialogFoundation(adapter) {
+            var _this = _super.call(this, __assign$1(__assign$1({}, MDCDialogFoundation.defaultAdapter), adapter)) || this;
+            _this.isOpen_ = false;
+            _this.animationFrame_ = 0;
+            _this.animationTimer_ = 0;
+            _this.layoutFrame_ = 0;
+            _this.escapeKeyAction_ = strings$1.CLOSE_ACTION;
+            _this.scrimClickAction_ = strings$1.CLOSE_ACTION;
+            _this.autoStackButtons_ = true;
+            _this.areButtonsStacked_ = false;
+            _this.suppressDefaultPressSelector = strings$1.SUPPRESS_DEFAULT_PRESS_SELECTOR;
+            return _this;
+        }
+        Object.defineProperty(MDCDialogFoundation, "cssClasses", {
+            get: function () {
+                return cssClasses$1;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCDialogFoundation, "strings", {
+            get: function () {
+                return strings$1;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCDialogFoundation, "numbers", {
+            get: function () {
+                return numbers$1;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCDialogFoundation, "defaultAdapter", {
+            get: function () {
+                return {
+                    addBodyClass: function () { return undefined; },
+                    addClass: function () { return undefined; },
+                    areButtonsStacked: function () { return false; },
+                    clickDefaultButton: function () { return undefined; },
+                    eventTargetMatches: function () { return false; },
+                    getActionFromEvent: function () { return ''; },
+                    getInitialFocusEl: function () { return null; },
+                    hasClass: function () { return false; },
+                    isContentScrollable: function () { return false; },
+                    notifyClosed: function () { return undefined; },
+                    notifyClosing: function () { return undefined; },
+                    notifyOpened: function () { return undefined; },
+                    notifyOpening: function () { return undefined; },
+                    releaseFocus: function () { return undefined; },
+                    removeBodyClass: function () { return undefined; },
+                    removeClass: function () { return undefined; },
+                    reverseButtons: function () { return undefined; },
+                    trapFocus: function () { return undefined; },
+                };
+            },
+            enumerable: true,
+            configurable: true
+        });
+        MDCDialogFoundation.prototype.init = function () {
+            if (this.adapter.hasClass(cssClasses$1.STACKED)) {
+                this.setAutoStackButtons(false);
+            }
+        };
+        MDCDialogFoundation.prototype.destroy = function () {
+            if (this.isOpen_) {
+                this.close(strings$1.DESTROY_ACTION);
+            }
+            if (this.animationTimer_) {
+                clearTimeout(this.animationTimer_);
+                this.handleAnimationTimerEnd_();
+            }
+            if (this.layoutFrame_) {
+                cancelAnimationFrame(this.layoutFrame_);
+                this.layoutFrame_ = 0;
+            }
+        };
+        MDCDialogFoundation.prototype.open = function () {
+            var _this = this;
+            this.isOpen_ = true;
+            this.adapter.notifyOpening();
+            this.adapter.addClass(cssClasses$1.OPENING);
+            // Wait a frame once display is no longer "none", to establish basis for animation
+            this.runNextAnimationFrame_(function () {
+                _this.adapter.addClass(cssClasses$1.OPEN);
+                _this.adapter.addBodyClass(cssClasses$1.SCROLL_LOCK);
+                _this.layout();
+                _this.animationTimer_ = setTimeout(function () {
+                    _this.handleAnimationTimerEnd_();
+                    _this.adapter.trapFocus(_this.adapter.getInitialFocusEl());
+                    _this.adapter.notifyOpened();
+                }, numbers$1.DIALOG_ANIMATION_OPEN_TIME_MS);
+            });
+        };
+        MDCDialogFoundation.prototype.close = function (action) {
+            var _this = this;
+            if (action === void 0) { action = ''; }
+            if (!this.isOpen_) {
+                // Avoid redundant close calls (and events), e.g. from keydown on elements that inherently emit click
+                return;
+            }
+            this.isOpen_ = false;
+            this.adapter.notifyClosing(action);
+            this.adapter.addClass(cssClasses$1.CLOSING);
+            this.adapter.removeClass(cssClasses$1.OPEN);
+            this.adapter.removeBodyClass(cssClasses$1.SCROLL_LOCK);
+            cancelAnimationFrame(this.animationFrame_);
+            this.animationFrame_ = 0;
+            clearTimeout(this.animationTimer_);
+            this.animationTimer_ = setTimeout(function () {
+                _this.adapter.releaseFocus();
+                _this.handleAnimationTimerEnd_();
+                _this.adapter.notifyClosed(action);
+            }, numbers$1.DIALOG_ANIMATION_CLOSE_TIME_MS);
+        };
+        MDCDialogFoundation.prototype.isOpen = function () {
+            return this.isOpen_;
+        };
+        MDCDialogFoundation.prototype.getEscapeKeyAction = function () {
+            return this.escapeKeyAction_;
+        };
+        MDCDialogFoundation.prototype.setEscapeKeyAction = function (action) {
+            this.escapeKeyAction_ = action;
+        };
+        MDCDialogFoundation.prototype.getScrimClickAction = function () {
+            return this.scrimClickAction_;
+        };
+        MDCDialogFoundation.prototype.setScrimClickAction = function (action) {
+            this.scrimClickAction_ = action;
+        };
+        MDCDialogFoundation.prototype.getAutoStackButtons = function () {
+            return this.autoStackButtons_;
+        };
+        MDCDialogFoundation.prototype.setAutoStackButtons = function (autoStack) {
+            this.autoStackButtons_ = autoStack;
+        };
+        MDCDialogFoundation.prototype.getSuppressDefaultPressSelector = function () {
+            return this.suppressDefaultPressSelector;
+        };
+        MDCDialogFoundation.prototype.setSuppressDefaultPressSelector = function (selector) {
+            this.suppressDefaultPressSelector = selector;
+        };
+        MDCDialogFoundation.prototype.layout = function () {
+            var _this = this;
+            if (this.layoutFrame_) {
+                cancelAnimationFrame(this.layoutFrame_);
+            }
+            this.layoutFrame_ = requestAnimationFrame(function () {
+                _this.layoutInternal_();
+                _this.layoutFrame_ = 0;
+            });
+        };
+        /** Handles click on the dialog root element. */
+        MDCDialogFoundation.prototype.handleClick = function (evt) {
+            var isScrim = this.adapter.eventTargetMatches(evt.target, strings$1.SCRIM_SELECTOR);
+            // Check for scrim click first since it doesn't require querying ancestors.
+            if (isScrim && this.scrimClickAction_ !== '') {
+                this.close(this.scrimClickAction_);
+            }
+            else {
+                var action = this.adapter.getActionFromEvent(evt);
+                if (action) {
+                    this.close(action);
+                }
+            }
+        };
+        /** Handles keydown on the dialog root element. */
+        MDCDialogFoundation.prototype.handleKeydown = function (evt) {
+            var isEnter = evt.key === 'Enter' || evt.keyCode === 13;
+            if (!isEnter) {
+                return;
+            }
+            var action = this.adapter.getActionFromEvent(evt);
+            if (action) {
+                // Action button callback is handled in `handleClick`,
+                // since space/enter keydowns on buttons trigger click events.
+                return;
+            }
+            // `composedPath` is used here, when available, to account for use cases
+            // where a target meant to suppress the default press behaviour
+            // may exist in a shadow root.
+            // For example, a textarea inside a web component:
+            // <mwc-dialog>
+            //   <horizontal-layout>
+            //     #shadow-root (open)
+            //       <mwc-textarea>
+            //         #shadow-root (open)
+            //           <textarea></textarea>
+            //       </mwc-textarea>
+            //   </horizontal-layout>
+            // </mwc-dialog>
+            var target = evt.composedPath ? evt.composedPath()[0] : evt.target;
+            var isDefault = !this.adapter.eventTargetMatches(target, this.suppressDefaultPressSelector);
+            if (isEnter && isDefault) {
+                this.adapter.clickDefaultButton();
+            }
+        };
+        /** Handles keydown on the document. */
+        MDCDialogFoundation.prototype.handleDocumentKeydown = function (evt) {
+            var isEscape = evt.key === 'Escape' || evt.keyCode === 27;
+            if (isEscape && this.escapeKeyAction_ !== '') {
+                this.close(this.escapeKeyAction_);
+            }
+        };
+        MDCDialogFoundation.prototype.layoutInternal_ = function () {
+            if (this.autoStackButtons_) {
+                this.detectStackedButtons_();
+            }
+            this.detectScrollableContent_();
+        };
+        MDCDialogFoundation.prototype.handleAnimationTimerEnd_ = function () {
+            this.animationTimer_ = 0;
+            this.adapter.removeClass(cssClasses$1.OPENING);
+            this.adapter.removeClass(cssClasses$1.CLOSING);
+        };
+        /**
+         * Runs the given logic on the next animation frame, using setTimeout to factor in Firefox reflow behavior.
+         */
+        MDCDialogFoundation.prototype.runNextAnimationFrame_ = function (callback) {
+            var _this = this;
+            cancelAnimationFrame(this.animationFrame_);
+            this.animationFrame_ = requestAnimationFrame(function () {
+                _this.animationFrame_ = 0;
+                clearTimeout(_this.animationTimer_);
+                _this.animationTimer_ = setTimeout(callback, 0);
+            });
+        };
+        MDCDialogFoundation.prototype.detectStackedButtons_ = function () {
+            // Remove the class first to let us measure the buttons' natural positions.
+            this.adapter.removeClass(cssClasses$1.STACKED);
+            var areButtonsStacked = this.adapter.areButtonsStacked();
+            if (areButtonsStacked) {
+                this.adapter.addClass(cssClasses$1.STACKED);
+            }
+            if (areButtonsStacked !== this.areButtonsStacked_) {
+                this.adapter.reverseButtons();
+                this.areButtonsStacked_ = areButtonsStacked;
+            }
+        };
+        MDCDialogFoundation.prototype.detectScrollableContent_ = function () {
+            // Remove the class first to let us measure the natural height of the content.
+            this.adapter.removeClass(cssClasses$1.SCROLLABLE);
+            if (this.adapter.isContentScrollable()) {
+                this.adapter.addClass(cssClasses$1.SCROLLABLE);
+            }
+        };
+        return MDCDialogFoundation;
+    }(MDCFoundation));
+
+    /**
+     * @license
+     * Copyright 2019 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    /**
+     * Determine whether the current browser supports passive event listeners, and
+     * if so, use them.
+     */
+    function applyPassive(globalObj) {
+        if (globalObj === void 0) { globalObj = window; }
+        return supportsPassiveOption(globalObj) ?
+            { passive: true } :
+            false;
+    }
+    function supportsPassiveOption(globalObj) {
+        if (globalObj === void 0) { globalObj = window; }
+        // See
+        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
+        var passiveSupported = false;
+        try {
+            var options = {
+                // This function will be called when the browser
+                // attempts to access the passive property.
+                get passive() {
+                    passiveSupported = true;
+                    return false;
+                }
+            };
+            var handler = function () { };
+            globalObj.document.addEventListener('test', handler, options);
+            globalObj.document.removeEventListener('test', handler, options);
+        }
+        catch (err) {
+            passiveSupported = false;
+        }
+        return passiveSupported;
+    }
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */ // tslint:disable:no-any
+    /**
+     * Specifies an observer callback that is run when the decorated property
+     * changes. The observer receives the current and old value as arguments.
+     */
+    const observer = (observer) => 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (proto, propName) => {
+        // if we haven't wrapped `updated` in this class, do so
+        if (!proto.constructor
+            ._observers) {
+            proto.constructor._observers = new Map();
+            const userUpdated = proto.updated;
+            proto.updated = function (changedProperties) {
+                userUpdated.call(this, changedProperties);
+                changedProperties.forEach((v, k) => {
+                    const observers = this.constructor
+                        ._observers;
+                    const observer = observers.get(k);
+                    if (observer !== undefined) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        observer.call(this, this[k], v);
+                    }
+                });
+            };
+            // clone any existing observers (superclasses)
+            // eslint-disable-next-line no-prototype-builtins
+        }
+        else if (!proto.constructor.hasOwnProperty('_observers')) {
+            const observers = proto.constructor._observers;
+            proto.constructor._observers = new Map();
+            observers.forEach(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (v, k) => proto.constructor._observers.set(k, v));
+        }
+        // set this method
+        proto.constructor._observers.set(propName, observer);
+    };
+
+    const blockingElements = document.$blockingElements;
+    class DialogBase extends BaseElement {
+        constructor() {
+            super(...arguments);
+            this.hideActions = false;
+            this.stacked = false;
+            this.heading = '';
+            this.scrimClickAction = 'close';
+            this.escapeKeyAction = 'close';
+            this.open = false;
+            this.defaultAction = 'close';
+            this.actionAttribute = 'dialogAction';
+            this.initialFocusAttribute = 'dialogInitialFocus';
+            this.mdcFoundationClass = MDCDialogFoundation;
+            this.boundLayout = null;
+            this.boundHandleClick = null;
+            this.boundHandleKeydown = null;
+            this.boundHandleDocumentKeydown = null;
+        }
+        get primaryButton() {
+            let assignedNodes = this.primarySlot.assignedNodes();
+            assignedNodes = assignedNodes.filter((node) => node instanceof HTMLElement);
+            const button = assignedNodes[0];
+            return button ? button : null;
+        }
+        emitNotification(name, action) {
+            const init = { detail: action ? { action } : {} };
+            const ev = new CustomEvent(name, init);
+            this.dispatchEvent(ev);
+        }
+        getInitialFocusEl() {
+            const initFocusSelector = `[${this.initialFocusAttribute}]`;
+            // only search light DOM. This typically handles all the cases
+            const lightDomQs = this.querySelector(initFocusSelector);
+            if (lightDomQs) {
+                return lightDomQs;
+            }
+            // if not in light dom, search each flattened distributed node.
+            const primarySlot = this.primarySlot;
+            const primaryNodes = primarySlot.assignedNodes({ flatten: true });
+            const primaryFocusElement = this.searchNodeTreesForAttribute(primaryNodes, this.initialFocusAttribute);
+            if (primaryFocusElement) {
+                return primaryFocusElement;
+            }
+            const secondarySlot = this.secondarySlot;
+            const secondaryNodes = secondarySlot.assignedNodes({ flatten: true });
+            const secondaryFocusElement = this.searchNodeTreesForAttribute(secondaryNodes, this.initialFocusAttribute);
+            if (secondaryFocusElement) {
+                return secondaryFocusElement;
+            }
+            const contentSlot = this.contentSlot;
+            const contentNodes = contentSlot.assignedNodes({ flatten: true });
+            const initFocusElement = this.searchNodeTreesForAttribute(contentNodes, this.initialFocusAttribute);
+            return initFocusElement;
+        }
+        searchNodeTreesForAttribute(nodes, attribute) {
+            for (const node of nodes) {
+                if (!(node instanceof HTMLElement)) {
+                    continue;
+                }
+                if (node.hasAttribute(attribute)) {
+                    return node;
+                }
+                else {
+                    const selection = node.querySelector(`[${attribute}]`);
+                    if (selection) {
+                        return selection;
+                    }
+                }
+            }
+            return null;
+        }
+        createAdapter() {
+            return Object.assign(Object.assign({}, addHasRemoveClass(this.mdcRoot)), { addBodyClass: () => document.body.style.overflow = 'hidden', removeBodyClass: () => document.body.style.overflow = '', areButtonsStacked: () => this.stacked, clickDefaultButton: () => {
+                    const primary = this.primaryButton;
+                    if (primary) {
+                        primary.click();
+                    }
+                }, eventTargetMatches: (target, selector) => target ? matches(target, selector) : false, getActionFromEvent: (e) => {
+                    if (!e.target) {
+                        return '';
+                    }
+                    const element = closest(e.target, `[${this.actionAttribute}]`);
+                    const action = element && element.getAttribute(this.actionAttribute);
+                    return action;
+                }, getInitialFocusEl: () => {
+                    return this.getInitialFocusEl();
+                }, isContentScrollable: () => {
+                    const el = this.contentElement;
+                    return el ? el.scrollHeight > el.offsetHeight : false;
+                }, notifyClosed: (action) => this.emitNotification('closed', action), notifyClosing: (action) => {
+                    if (!this.closingDueToDisconnect) {
+                        // Don't set our open state to closed just because we were
+                        // disconnected. That way if we get reconnected, we'll know to
+                        // re-open.
+                        this.open = false;
+                    }
+                    this.emitNotification('closing', action);
+                }, notifyOpened: () => this.emitNotification('opened'), notifyOpening: () => {
+                    this.open = true;
+                    this.emitNotification('opening');
+                }, reverseButtons: () => { }, releaseFocus: () => {
+                    blockingElements.remove(this);
+                }, trapFocus: (el) => {
+                    blockingElements.push(this);
+                    if (el) {
+                        el.focus();
+                    }
+                } });
+        }
+        render() {
+            const classes = {
+                [cssClasses$1.STACKED]: this.stacked,
+            };
+            let heading = html ``;
+            if (this.heading) {
+                heading = this.renderHeading();
+            }
+            const actionsClasses = {
+                'mdc-dialog__actions': !this.hideActions,
+            };
+            return html `
+    <div class="mdc-dialog ${classMap(classes)}"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="title"
+        aria-describedby="content">
+      <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface">
+          ${heading}
+          <div id="content" class="mdc-dialog__content">
+            <slot id="contentSlot"></slot>
+          </div>
+          <footer
+              id="actions"
+              class="${classMap(actionsClasses)}">
+            <span>
+              <slot name="secondaryAction"></slot>
+            </span>
+            <span>
+             <slot name="primaryAction"></slot>
+            </span>
+          </footer>
+        </div>
+      </div>
+      <div class="mdc-dialog__scrim"></div>
+    </div>`;
+        }
+        renderHeading() {
+            return html `
+      <h2 id="title" class="mdc-dialog__title">${this.heading}</h2>`;
+        }
+        firstUpdated() {
+            super.firstUpdated();
+            this.mdcFoundation.setAutoStackButtons(true);
+        }
+        connectedCallback() {
+            super.connectedCallback();
+            if (this.open && this.mdcFoundation && !this.mdcFoundation.isOpen()) {
+                // We probably got disconnected while we were still open. Re-open,
+                // matching the behavior of native <dialog>.
+                this.setEventListeners();
+                this.mdcFoundation.open();
+            }
+        }
+        disconnectedCallback() {
+            super.disconnectedCallback();
+            if (this.open && this.mdcFoundation) {
+                // If this dialog is opened and then disconnected, we want to close
+                // the foundation, so that 1) any pending timers are cancelled
+                // (in particular for trapFocus), and 2) if we reconnect, we can open
+                // the foundation again to retrigger animations and focus.
+                this.removeEventListeners();
+                this.closingDueToDisconnect = true;
+                this.mdcFoundation.close(this.currentAction || this.defaultAction);
+                this.closingDueToDisconnect = false;
+                this.currentAction = undefined;
+                // When we close normally, the releaseFocus callback handles removing
+                // ourselves from the blocking elements stack. However, that callback
+                // happens on a delay, and when we are closing due to a disconnect we
+                // need to remove ourselves before the blocking element polyfill's
+                // mutation observer notices and logs a warning, since it's not valid to
+                // be in the blocking elements stack while disconnected.
+                blockingElements.remove(this);
+            }
+        }
+        forceLayout() {
+            this.mdcFoundation.layout();
+        }
+        focus() {
+            const initialFocusEl = this.getInitialFocusEl();
+            initialFocusEl && initialFocusEl.focus();
+        }
+        blur() {
+            if (!this.shadowRoot) {
+                return;
+            }
+            const activeEl = this.shadowRoot.activeElement;
+            if (activeEl) {
+                if (activeEl instanceof HTMLElement) {
+                    activeEl.blur();
+                }
+            }
+            else {
+                const root = this.getRootNode();
+                const activeEl = root instanceof Document ? root.activeElement : null;
+                if (activeEl instanceof HTMLElement) {
+                    activeEl.blur();
+                }
+            }
+        }
+        setEventListeners() {
+            this.boundHandleClick = this.mdcFoundation.handleClick.bind(this.mdcFoundation);
+            this.boundLayout = () => {
+                if (this.open) {
+                    this.mdcFoundation.layout.bind(this.mdcFoundation);
+                }
+            };
+            this.boundHandleKeydown = this.mdcFoundation.handleKeydown.bind(this.mdcFoundation);
+            this.boundHandleDocumentKeydown =
+                this.mdcFoundation.handleDocumentKeydown.bind(this.mdcFoundation);
+            this.mdcRoot.addEventListener('click', this.boundHandleClick);
+            window.addEventListener('resize', this.boundLayout, applyPassive());
+            window.addEventListener('orientationchange', this.boundLayout, applyPassive());
+            this.mdcRoot.addEventListener('keydown', this.boundHandleKeydown, applyPassive());
+            document.addEventListener('keydown', this.boundHandleDocumentKeydown, applyPassive());
+        }
+        removeEventListeners() {
+            if (this.boundHandleClick) {
+                this.mdcRoot.removeEventListener('click', this.boundHandleClick);
+            }
+            if (this.boundLayout) {
+                window.removeEventListener('resize', this.boundLayout);
+                window.removeEventListener('orientationchange', this.boundLayout);
+            }
+            if (this.boundHandleKeydown) {
+                this.mdcRoot.removeEventListener('keydown', this.boundHandleKeydown);
+            }
+            if (this.boundHandleDocumentKeydown) {
+                this.mdcRoot.removeEventListener('keydown', this.boundHandleDocumentKeydown);
+            }
+        }
+        close() {
+            this.open = false;
+        }
+        show() {
+            this.open = true;
+        }
+    }
+    __decorate([
+        query('.mdc-dialog')
+    ], DialogBase.prototype, "mdcRoot", void 0);
+    __decorate([
+        query('slot[name="primaryAction"]')
+    ], DialogBase.prototype, "primarySlot", void 0);
+    __decorate([
+        query('slot[name="secondaryAction"]')
+    ], DialogBase.prototype, "secondarySlot", void 0);
+    __decorate([
+        query('#contentSlot')
+    ], DialogBase.prototype, "contentSlot", void 0);
+    __decorate([
+        query('.mdc-dialog__content')
+    ], DialogBase.prototype, "contentElement", void 0);
+    __decorate([
+        query('.mdc-container')
+    ], DialogBase.prototype, "conatinerElement", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], DialogBase.prototype, "hideActions", void 0);
+    __decorate([
+        property({ type: Boolean }),
+        observer(function () {
+            this.forceLayout();
+        })
+    ], DialogBase.prototype, "stacked", void 0);
+    __decorate([
+        property({ type: String })
+    ], DialogBase.prototype, "heading", void 0);
+    __decorate([
+        property({ type: String }),
+        observer(function (newAction) {
+            this.mdcFoundation.setScrimClickAction(newAction);
+        })
+    ], DialogBase.prototype, "scrimClickAction", void 0);
+    __decorate([
+        property({ type: String }),
+        observer(function (newAction) {
+            this.mdcFoundation.setEscapeKeyAction(newAction);
+        })
+    ], DialogBase.prototype, "escapeKeyAction", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true }),
+        observer(function (isOpen) {
+            // Check isConnected because we could have been disconnected before first
+            // update. If we're now closed, then we shouldn't start the MDC foundation
+            // opening animation. If we're now closed, then we've already closed the
+            // foundation in disconnectedCallback.
+            if (this.mdcFoundation && this.isConnected) {
+                if (isOpen) {
+                    this.setEventListeners();
+                    this.mdcFoundation.open();
+                }
+                else {
+                    this.removeEventListeners();
+                    this.mdcFoundation.close(this.currentAction || this.defaultAction);
+                    this.currentAction = undefined;
+                }
+            }
+        })
+    ], DialogBase.prototype, "open", void 0);
+    __decorate([
+        property()
+    ], DialogBase.prototype, "defaultAction", void 0);
+    __decorate([
+        property()
+    ], DialogBase.prototype, "actionAttribute", void 0);
+    __decorate([
+        property()
+    ], DialogBase.prototype, "initialFocusAttribute", void 0);
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    const style$4 = css `.mdc-elevation-overlay{position:absolute;border-radius:inherit;pointer-events:none;opacity:0;opacity:var(--mdc-elevation-overlay-opacity, 0);transition:opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);background-color:#fff;background-color:var(--mdc-elevation-overlay-color, #fff)}.mdc-dialog,.mdc-dialog__scrim{position:fixed;top:0;left:0;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:100%}.mdc-dialog{display:none;z-index:7}.mdc-dialog .mdc-dialog__surface{background-color:#fff;background-color:var(--mdc-theme-surface, #fff)}.mdc-dialog .mdc-dialog__scrim{background-color:rgba(0,0,0,.32)}.mdc-dialog .mdc-dialog__title{color:rgba(0,0,0,.87)}.mdc-dialog .mdc-dialog__content{color:rgba(0,0,0,.6)}.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__title,.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__actions{border-color:rgba(0,0,0,.12)}.mdc-dialog .mdc-dialog__content{padding:20px 24px 20px 24px}.mdc-dialog .mdc-dialog__surface{min-width:280px}@media(max-width: 592px){.mdc-dialog .mdc-dialog__surface{max-width:calc(100vw - 32px)}}@media(min-width: 592px){.mdc-dialog .mdc-dialog__surface{max-width:560px}}.mdc-dialog .mdc-dialog__surface{max-height:calc(100% - 32px)}.mdc-dialog .mdc-dialog__surface{border-radius:4px;border-radius:var(--mdc-shape-medium, 4px)}.mdc-dialog__scrim{opacity:0;z-index:-1}.mdc-dialog__container{display:flex;flex-direction:row;align-items:center;justify-content:space-around;box-sizing:border-box;height:100%;transform:scale(0.8);opacity:0;pointer-events:none}.mdc-dialog__surface{position:relative;box-shadow:0px 11px 15px -7px rgba(0, 0, 0, 0.2),0px 24px 38px 3px rgba(0, 0, 0, 0.14),0px 9px 46px 8px rgba(0,0,0,.12);display:flex;flex-direction:column;flex-grow:0;flex-shrink:0;box-sizing:border-box;max-width:100%;max-height:100%;pointer-events:auto;overflow-y:auto}.mdc-dialog__surface .mdc-elevation-overlay{width:100%;height:100%;top:0;left:0}.mdc-dialog[dir=rtl] .mdc-dialog__surface,[dir=rtl] .mdc-dialog .mdc-dialog__surface{text-align:right}.mdc-dialog__title{display:block;margin-top:0;line-height:normal;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-family:Roboto, sans-serif;font-family:var(--mdc-typography-headline6-font-family, var(--mdc-typography-font-family, Roboto, sans-serif));font-size:1.25rem;font-size:var(--mdc-typography-headline6-font-size, 1.25rem);line-height:2rem;line-height:var(--mdc-typography-headline6-line-height, 2rem);font-weight:500;font-weight:var(--mdc-typography-headline6-font-weight, 500);letter-spacing:0.0125em;letter-spacing:var(--mdc-typography-headline6-letter-spacing, 0.0125em);text-decoration:inherit;text-decoration:var(--mdc-typography-headline6-text-decoration, inherit);text-transform:inherit;text-transform:var(--mdc-typography-headline6-text-transform, inherit);position:relative;flex-shrink:0;box-sizing:border-box;margin:0;padding:0 24px 9px;border-bottom:1px solid transparent}.mdc-dialog__title::before{display:inline-block;width:0;height:40px;content:"";vertical-align:0}.mdc-dialog[dir=rtl] .mdc-dialog__title,[dir=rtl] .mdc-dialog .mdc-dialog__title{text-align:right}.mdc-dialog--scrollable .mdc-dialog__title{padding-bottom:15px}.mdc-dialog__content{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-family:Roboto, sans-serif;font-family:var(--mdc-typography-body1-font-family, var(--mdc-typography-font-family, Roboto, sans-serif));font-size:1rem;font-size:var(--mdc-typography-body1-font-size, 1rem);line-height:1.5rem;line-height:var(--mdc-typography-body1-line-height, 1.5rem);font-weight:400;font-weight:var(--mdc-typography-body1-font-weight, 400);letter-spacing:0.03125em;letter-spacing:var(--mdc-typography-body1-letter-spacing, 0.03125em);text-decoration:inherit;text-decoration:var(--mdc-typography-body1-text-decoration, inherit);text-transform:inherit;text-transform:var(--mdc-typography-body1-text-transform, inherit);flex-grow:1;box-sizing:border-box;margin:0;overflow:auto;-webkit-overflow-scrolling:touch}.mdc-dialog__content>:first-child{margin-top:0}.mdc-dialog__content>:last-child{margin-bottom:0}.mdc-dialog__title+.mdc-dialog__content{padding-top:0}.mdc-dialog--scrollable .mdc-dialog__title+.mdc-dialog__content{padding-top:8px;padding-bottom:8px}.mdc-dialog__content .mdc-list:first-child:last-child{padding:6px 0 0}.mdc-dialog--scrollable .mdc-dialog__content .mdc-list:first-child:last-child{padding:0}.mdc-dialog__actions{display:flex;position:relative;flex-shrink:0;flex-wrap:wrap;align-items:center;justify-content:flex-end;box-sizing:border-box;min-height:52px;margin:0;padding:8px;border-top:1px solid transparent}.mdc-dialog--stacked .mdc-dialog__actions{flex-direction:column;align-items:flex-end}.mdc-dialog__button{margin-left:8px;margin-right:0;max-width:100%;text-align:right}[dir=rtl] .mdc-dialog__button,.mdc-dialog__button[dir=rtl]{margin-left:0;margin-right:8px}.mdc-dialog__button:first-child{margin-left:0;margin-right:0}[dir=rtl] .mdc-dialog__button:first-child,.mdc-dialog__button:first-child[dir=rtl]{margin-left:0;margin-right:0}.mdc-dialog[dir=rtl] .mdc-dialog__button,[dir=rtl] .mdc-dialog .mdc-dialog__button{text-align:left}.mdc-dialog--stacked .mdc-dialog__button:not(:first-child){margin-top:12px}.mdc-dialog--open,.mdc-dialog--opening,.mdc-dialog--closing{display:flex}.mdc-dialog--opening .mdc-dialog__scrim{transition:opacity 150ms linear}.mdc-dialog--opening .mdc-dialog__container{transition:opacity 75ms linear,transform 150ms 0ms cubic-bezier(0, 0, 0.2, 1)}.mdc-dialog--closing .mdc-dialog__scrim,.mdc-dialog--closing .mdc-dialog__container{transition:opacity 75ms linear}.mdc-dialog--closing .mdc-dialog__container{transform:none}.mdc-dialog--open .mdc-dialog__scrim{opacity:1}.mdc-dialog--open .mdc-dialog__container{transform:none;opacity:1}.mdc-dialog-scroll-lock{overflow:hidden}#actions:not(.mdc-dialog__actions){display:none}.mdc-dialog__surface{box-shadow:var(--mdc-dialog-box-shadow, 0px 11px 15px -7px rgba(0, 0, 0, 0.2), 0px 24px 38px 3px rgba(0, 0, 0, 0.14), 0px 9px 46px 8px rgba(0, 0, 0, 0.12))}@media(min-width: 560px){.mdc-dialog .mdc-dialog__surface{max-width:560px;max-width:var(--mdc-dialog-max-width, 560px)}}.mdc-dialog .mdc-dialog__scrim{background-color:rgba(0, 0, 0, 0.32);background-color:var(--mdc-dialog-scrim-color, rgba(0, 0, 0, 0.32))}.mdc-dialog .mdc-dialog__title{color:rgba(0, 0, 0, 0.87);color:var(--mdc-dialog-heading-ink-color, rgba(0, 0, 0, 0.87))}.mdc-dialog .mdc-dialog__content{color:rgba(0, 0, 0, 0.6);color:var(--mdc-dialog-content-ink-color, rgba(0, 0, 0, 0.6))}.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__title,.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__actions{border-color:rgba(0, 0, 0, 0.12);border-color:var(--mdc-dialog-scroll-divider-color, rgba(0, 0, 0, 0.12))}.mdc-dialog .mdc-dialog__surface{min-width:280px;min-width:var(--mdc-dialog-min-width, 280px)}.mdc-dialog .mdc-dialog__surface{max-height:var(--mdc-dialog-max-height, calc(100% - 32px))}#actions ::slotted(*){margin-left:8px;margin-right:0;max-width:100%;text-align:right}[dir=rtl] #actions ::slotted(*),#actions ::slotted(*)[dir=rtl]{margin-left:0;margin-right:8px}.mdc-dialog[dir=rtl] #actions ::slotted(*),[dir=rtl] .mdc-dialog #actions ::slotted(*){text-align:left}.mdc-dialog--stacked #actions{flex-direction:column-reverse}.mdc-dialog--stacked #actions *:not(:last-child) ::slotted(*){flex-basis:1e-9px;margin-top:12px}`;
+
+    let Dialog = class Dialog extends DialogBase {
+    };
+    Dialog.styles = style$4;
+    Dialog = __decorate([
+        customElement('mwc-dialog')
+    ], Dialog);
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+    /* global Reflect, Promise */
+
+    var extendStatics$2 = function(d, b) {
+        extendStatics$2 = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics$2(d, b);
+    };
+
+    function __extends$2(d, b) {
+        extendStatics$2(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    }
+
+    var __assign$2 = function() {
+        __assign$2 = Object.assign || function __assign(t) {
+            for (var s, i = 1, n = arguments.length; i < n; i++) {
+                s = arguments[i];
+                for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+            }
+            return t;
+        };
+        return __assign$2.apply(this, arguments);
+    };
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var cssClasses$2 = {
+        ROOT: 'mdc-form-field',
+    };
+    var strings$2 = {
+        LABEL_SELECTOR: '.mdc-form-field > label',
+    };
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCFormFieldFoundation = /** @class */ (function (_super) {
+        __extends$2(MDCFormFieldFoundation, _super);
+        function MDCFormFieldFoundation(adapter) {
+            var _this = _super.call(this, __assign$2(__assign$2({}, MDCFormFieldFoundation.defaultAdapter), adapter)) || this;
+            _this.click = function () {
+                _this.handleClick();
+            };
+            return _this;
+        }
+        Object.defineProperty(MDCFormFieldFoundation, "cssClasses", {
+            get: function () {
+                return cssClasses$2;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCFormFieldFoundation, "strings", {
+            get: function () {
+                return strings$2;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCFormFieldFoundation, "defaultAdapter", {
+            get: function () {
+                return {
+                    activateInputRipple: function () { return undefined; },
+                    deactivateInputRipple: function () { return undefined; },
+                    deregisterInteractionHandler: function () { return undefined; },
+                    registerInteractionHandler: function () { return undefined; },
+                };
+            },
+            enumerable: true,
+            configurable: true
+        });
+        MDCFormFieldFoundation.prototype.init = function () {
+            this.adapter.registerInteractionHandler('click', this.click);
+        };
+        MDCFormFieldFoundation.prototype.destroy = function () {
+            this.adapter.deregisterInteractionHandler('click', this.click);
+        };
+        MDCFormFieldFoundation.prototype.handleClick = function () {
+            var _this = this;
+            this.adapter.activateInputRipple();
+            requestAnimationFrame(function () {
+                _this.adapter.deactivateInputRipple();
+            });
+        };
+        return MDCFormFieldFoundation;
+    }(MDCFoundation));
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    /** @soyCompatible */
+    class FormElement extends BaseElement {
+        createRenderRoot() {
+            return this.attachShadow({ mode: 'open', delegatesFocus: true });
+        }
+        click() {
+            if (this.formElement) {
+                this.formElement.focus();
+                this.formElement.click();
+            }
+        }
+        setAriaLabel(label) {
+            if (this.formElement) {
+                this.formElement.setAttribute('aria-label', label);
+            }
+        }
+        firstUpdated() {
+            super.firstUpdated();
+            this.mdcRoot.addEventListener('change', (e) => {
+                this.dispatchEvent(new Event('change', e));
+            });
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2018 Google Inc. All Rights Reserved.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *     http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class FormfieldBase extends BaseElement {
+        constructor() {
+            super(...arguments);
+            this.alignEnd = false;
+            this.spaceBetween = false;
+            this.nowrap = false;
+            this.label = '';
+            this.mdcFoundationClass = MDCFormFieldFoundation;
+        }
+        createAdapter() {
+            return {
+                registerInteractionHandler: (type, handler) => {
+                    this.labelEl.addEventListener(type, handler);
+                },
+                deregisterInteractionHandler: (type, handler) => {
+                    this.labelEl.removeEventListener(type, handler);
+                },
+                activateInputRipple: async () => {
+                    const input = this.input;
+                    if (input instanceof FormElement) {
+                        const ripple = await input.ripple;
+                        if (ripple) {
+                            ripple.startPress();
+                        }
+                    }
+                },
+                deactivateInputRipple: async () => {
+                    const input = this.input;
+                    if (input instanceof FormElement) {
+                        const ripple = await input.ripple;
+                        if (ripple) {
+                            ripple.endPress();
+                        }
+                    }
+                },
+            };
+        }
+        get input() {
+            return findAssignedElement(this.slotEl, '*');
+        }
+        render() {
+            const classes = {
+                'mdc-form-field--align-end': this.alignEnd,
+                'mdc-form-field--space-between': this.spaceBetween,
+                'mdc-form-field--nowrap': this.nowrap
+            };
+            return html `
+      <div class="mdc-form-field ${classMap(classes)}">
+        <slot></slot>
+        <label class="mdc-label"
+               @click="${this._labelClick}">${this.label}</label>
+      </div>`;
+        }
+        _labelClick() {
+            const input = this.input;
+            if (input) {
+                input.focus();
+                input.click();
+            }
+        }
+    }
+    __decorate([
+        property({ type: Boolean })
+    ], FormfieldBase.prototype, "alignEnd", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], FormfieldBase.prototype, "spaceBetween", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], FormfieldBase.prototype, "nowrap", void 0);
+    __decorate([
+        property({ type: String }),
+        observer(async function (label) {
+            const input = this.input;
+            if (input) {
+                if (input.localName === 'input') {
+                    input.setAttribute('aria-label', label);
+                }
+                else if (input instanceof FormElement) {
+                    await input.updateComplete;
+                    input.setAriaLabel(label);
+                }
+            }
+        })
+    ], FormfieldBase.prototype, "label", void 0);
+    __decorate([
+        query('.mdc-form-field')
+    ], FormfieldBase.prototype, "mdcRoot", void 0);
+    __decorate([
+        query('slot')
+    ], FormfieldBase.prototype, "slotEl", void 0);
+    __decorate([
+        query('label')
+    ], FormfieldBase.prototype, "labelEl", void 0);
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    const style$5 = css `.mdc-form-field{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-family:Roboto, sans-serif;font-family:var(--mdc-typography-body2-font-family, var(--mdc-typography-font-family, Roboto, sans-serif));font-size:0.875rem;font-size:var(--mdc-typography-body2-font-size, 0.875rem);line-height:1.25rem;line-height:var(--mdc-typography-body2-line-height, 1.25rem);font-weight:400;font-weight:var(--mdc-typography-body2-font-weight, 400);letter-spacing:0.0178571429em;letter-spacing:var(--mdc-typography-body2-letter-spacing, 0.0178571429em);text-decoration:inherit;text-decoration:var(--mdc-typography-body2-text-decoration, inherit);text-transform:inherit;text-transform:var(--mdc-typography-body2-text-transform, inherit);color:rgba(0, 0, 0, 0.87);color:var(--mdc-theme-text-primary-on-background, rgba(0, 0, 0, 0.87));display:inline-flex;align-items:center;vertical-align:middle}.mdc-form-field>label{margin-left:0;margin-right:auto;padding-left:4px;padding-right:0;order:0}[dir=rtl] .mdc-form-field>label,.mdc-form-field>label[dir=rtl]{margin-left:auto;margin-right:0}[dir=rtl] .mdc-form-field>label,.mdc-form-field>label[dir=rtl]{padding-left:0;padding-right:4px}.mdc-form-field--nowrap>label{text-overflow:ellipsis;overflow:hidden;white-space:nowrap}.mdc-form-field--align-end>label{margin-left:auto;margin-right:0;padding-left:0;padding-right:4px;order:-1}[dir=rtl] .mdc-form-field--align-end>label,.mdc-form-field--align-end>label[dir=rtl]{margin-left:0;margin-right:auto}[dir=rtl] .mdc-form-field--align-end>label,.mdc-form-field--align-end>label[dir=rtl]{padding-left:4px;padding-right:0}.mdc-form-field--space-between{justify-content:space-between}.mdc-form-field--space-between>label{margin:0}[dir=rtl] .mdc-form-field--space-between>label,.mdc-form-field--space-between>label[dir=rtl]{margin:0}:host{display:inline-flex}.mdc-form-field{width:100%}::slotted(*){-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-family:Roboto, sans-serif;font-family:var(--mdc-typography-body2-font-family, var(--mdc-typography-font-family, Roboto, sans-serif));font-size:0.875rem;font-size:var(--mdc-typography-body2-font-size, 0.875rem);line-height:1.25rem;line-height:var(--mdc-typography-body2-line-height, 1.25rem);font-weight:400;font-weight:var(--mdc-typography-body2-font-weight, 400);letter-spacing:0.0178571429em;letter-spacing:var(--mdc-typography-body2-letter-spacing, 0.0178571429em);text-decoration:inherit;text-decoration:var(--mdc-typography-body2-text-decoration, inherit);text-transform:inherit;text-transform:var(--mdc-typography-body2-text-transform, inherit);color:rgba(0, 0, 0, 0.87);color:var(--mdc-theme-text-primary-on-background, rgba(0, 0, 0, 0.87))}::slotted(mwc-switch){margin-right:10px}[dir=rtl] ::slotted(mwc-switch),::slotted(mwc-switch)[dir=rtl]{margin-left:10px}`;
+
+    let Formfield = class Formfield extends FormfieldBase {
+    };
+    Formfield.styles = style$5;
+    Formfield = __decorate([
+        customElement('mwc-formfield')
+    ], Formfield);
+
+    /**
+     * @license
+     * Copyright (c) 2018 The Polymer Project Authors. All rights reserved.
+     * This code may only be used under the BSD style license found at
+     * http://polymer.github.io/LICENSE.txt
+     * The complete set of authors may be found at
+     * http://polymer.github.io/AUTHORS.txt
+     * The complete set of contributors may be found at
+     * http://polymer.github.io/CONTRIBUTORS.txt
+     * Code distributed by Google as part of the polymer project is also
+     * subject to an additional IP rights grant found at
+     * http://polymer.github.io/PATENTS.txt
+     */
+    const previousValues = new WeakMap();
+    /**
+     * For AttributeParts, sets the attribute if the value is defined and removes
+     * the attribute if the value is undefined.
+     *
+     * For other part types, this directive is a no-op.
+     */
+    const ifDefined = directive((value) => (part) => {
+        const previousValue = previousValues.get(part);
+        if (value === undefined && part instanceof AttributePart) {
+            // If the value is undefined, remove the attribute, but only if the value
+            // was previously defined.
+            if (previousValue !== undefined || !previousValues.has(part)) {
+                const name = part.committer.name;
+                part.committer.element.removeAttribute(name);
+            }
+        }
+        else if (value !== previousValue) {
+            part.setValue(value);
+        }
+        previousValues.set(part, value);
+    });
+
+    /** @soyCompatible */
+    class CheckboxBase extends FormElement {
+        constructor() {
+            super(...arguments);
+            this.checked = false;
+            this.indeterminate = false;
+            this.disabled = false;
+            this.value = '';
+            /**
+             * Touch target extends beyond visual boundary of a component by default.
+             * Set to `true` to remove touch target added to the component.
+             * @see https://material.io/design/usability/accessibility.html
+             */
+            this.reducedTouchTarget = false;
+            this.animationClass = '';
+            this.shouldRenderRipple = false;
+            this.focused = false;
+            // MDC Foundation is unused
+            this.mdcFoundationClass = undefined;
+            this.mdcFoundation = undefined;
+            this.rippleElement = null;
+            this.rippleHandlers = new RippleHandlers(() => {
+                this.shouldRenderRipple = true;
+                this.ripple.then((v) => this.rippleElement = v);
+                return this.ripple;
+            });
+        }
+        createAdapter() {
+            return {};
+        }
+        update(changedProperties) {
+            const oldIndeterminate = changedProperties.get('indeterminate');
+            const oldChecked = changedProperties.get('checked');
+            const oldDisabled = changedProperties.get('disabled');
+            if (oldIndeterminate !== undefined || oldChecked !== undefined ||
+                oldDisabled !== undefined) {
+                const oldState = this.calculateAnimationStateName(!!oldChecked, !!oldIndeterminate, !!oldDisabled);
+                const newState = this.calculateAnimationStateName(this.checked, this.indeterminate, this.disabled);
+                this.animationClass = `${oldState}-${newState}`;
+            }
+            super.update(changedProperties);
+        }
+        calculateAnimationStateName(checked, indeterminate, disabled) {
+            if (disabled) {
+                return 'disabled';
+            }
+            else if (indeterminate) {
+                return 'indeterminate';
+            }
+            else if (checked) {
+                return 'checked';
+            }
+            else {
+                return 'unchecked';
+            }
+        }
+        // TODO(dfreedm): Make this use selected as a param after Polymer/internal#739
+        /** @soyTemplate */
+        renderRipple() {
+            const selected = this.indeterminate || this.checked;
+            return this.shouldRenderRipple ? html `
+        <mwc-ripple
+          .accent="${selected}"
+          .disabled="${this.disabled}"
+          unbounded>
+        </mwc-ripple>` :
+                '';
+        }
+        /**
+         * @soyTemplate
+         * @soyAttributes checkboxAttributes: input
+         * @soyClasses checkboxClasses: .mdc-checkbox
+         */
+        render() {
+            const selected = this.indeterminate || this.checked;
+            /* eslint-disable eqeqeq */
+            // tslint:disable:triple-equals
+            /** @classMap */
+            const classes = {
+                'mdc-checkbox--disabled': this.disabled,
+                'mdc-checkbox--selected': selected,
+                'mdc-checkbox--touch': !this.reducedTouchTarget,
+                'mdc-ripple-upgraded--background-focused': this.focused,
+                // transition animiation classes
+                'mdc-checkbox--anim-checked-indeterminate': this.animationClass == 'checked-indeterminate',
+                'mdc-checkbox--anim-checked-unchecked': this.animationClass == 'checked-unchecked',
+                'mdc-checkbox--anim-indeterminate-checked': this.animationClass == 'indeterminate-checked',
+                'mdc-checkbox--anim-indeterminate-unchecked': this.animationClass == 'indeterminate-unchecked',
+                'mdc-checkbox--anim-unchecked-checked': this.animationClass == 'unchecked-checked',
+                'mdc-checkbox--anim-unchecked-indeterminate': this.animationClass == 'unchecked-indeterminate',
+            };
+            // tslint:enable:triple-equals
+            /* eslint-enable eqeqeq */
+            const ariaChecked = this.indeterminate ? 'mixed' : undefined;
+            return html `
+      <div class="mdc-checkbox mdc-checkbox--upgraded ${classMap(classes)}">
+        <input type="checkbox"
+              class="mdc-checkbox__native-control"
+              aria-checked="${ifDefined(ariaChecked)}"
+              data-indeterminate="${this.indeterminate ? 'true' : 'false'}"
+              ?disabled="${this.disabled}"
+              .indeterminate="${this.indeterminate}"
+              .checked="${this.checked}"
+              .value="${this.value}"
+              @change="${this._changeHandler}"
+              @focus="${this._handleFocus}"
+              @blur="${this._handleBlur}"
+              @mousedown="${this.handleRippleMouseDown}"
+              @mouseenter="${this.handleRippleMouseEnter}"
+              @mouseleave="${this.handleRippleMouseLeave}"
+              @touchstart="${this.handleRippleTouchStart}"
+              @touchend="${this.handleRippleDeactivate}"
+              @touchcancel="${this.handleRippleDeactivate}">
+        <div class="mdc-checkbox__background"
+          @animationend="${this.resetAnimationClass}">
+          <svg class="mdc-checkbox__checkmark"
+              viewBox="0 0 24 24">
+            <path class="mdc-checkbox__checkmark-path"
+                  fill="none"
+                  d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+          </svg>
+          <div class="mdc-checkbox__mixedmark"></div>
+        </div>
+        ${this.renderRipple()}
+      </div>`;
+        }
+        _handleFocus() {
+            this.focused = true;
+            this.handleRippleFocus();
+        }
+        _handleBlur() {
+            this.focused = false;
+            this.handleRippleBlur();
+        }
+        handleRippleMouseDown(event) {
+            const onUp = () => {
+                window.removeEventListener('mouseup', onUp);
+                this.handleRippleDeactivate();
+            };
+            window.addEventListener('mouseup', onUp);
+            this.rippleHandlers.startPress(event);
+        }
+        handleRippleTouchStart(event) {
+            this.rippleHandlers.startPress(event);
+        }
+        handleRippleDeactivate() {
+            this.rippleHandlers.endPress();
+        }
+        handleRippleMouseEnter() {
+            this.rippleHandlers.startHover();
+        }
+        handleRippleMouseLeave() {
+            this.rippleHandlers.endHover();
+        }
+        handleRippleFocus() {
+            this.rippleHandlers.startFocus();
+        }
+        handleRippleBlur() {
+            this.rippleHandlers.endFocus();
+        }
+        _changeHandler() {
+            this.checked = this.formElement.checked;
+            this.indeterminate = this.formElement.indeterminate;
+        }
+        resetAnimationClass() {
+            this.animationClass = '';
+        }
+        get isRippleActive() {
+            var _a;
+            return ((_a = this.rippleElement) === null || _a === void 0 ? void 0 : _a.isActive) || false;
+        }
+    }
+    __decorate([
+        query('.mdc-checkbox')
+    ], CheckboxBase.prototype, "mdcRoot", void 0);
+    __decorate([
+        query('input')
+    ], CheckboxBase.prototype, "formElement", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true })
+    ], CheckboxBase.prototype, "checked", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], CheckboxBase.prototype, "indeterminate", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true })
+    ], CheckboxBase.prototype, "disabled", void 0);
+    __decorate([
+        property({ type: String })
+    ], CheckboxBase.prototype, "value", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], CheckboxBase.prototype, "reducedTouchTarget", void 0);
+    __decorate([
+        internalProperty()
+    ], CheckboxBase.prototype, "animationClass", void 0);
+    __decorate([
+        internalProperty()
+    ], CheckboxBase.prototype, "shouldRenderRipple", void 0);
+    __decorate([
+        internalProperty()
+    ], CheckboxBase.prototype, "focused", void 0);
+    __decorate([
+        queryAsync('mwc-ripple')
+    ], CheckboxBase.prototype, "ripple", void 0);
+    __decorate([
+        eventOptions({ passive: true })
+    ], CheckboxBase.prototype, "handleRippleTouchStart", null);
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    const style$6 = css `.mdc-checkbox{padding:11px;margin-top:0px;margin-bottom:0px;margin-right:0px;margin-left:0px}.mdc-checkbox .mdc-checkbox__ripple::before,.mdc-checkbox .mdc-checkbox__ripple::after{background-color:#000;background-color:var(--mdc-ripple-color, #000)}.mdc-checkbox:hover .mdc-checkbox__ripple::before,.mdc-checkbox.mdc-ripple-surface--hover .mdc-checkbox__ripple::before{opacity:0.04;opacity:var(--mdc-ripple-hover-opacity, 0.04)}.mdc-checkbox.mdc-ripple-upgraded--background-focused .mdc-checkbox__ripple::before,.mdc-checkbox:not(.mdc-ripple-upgraded):focus .mdc-checkbox__ripple::before{transition-duration:75ms;opacity:0.12;opacity:var(--mdc-ripple-focus-opacity, 0.12)}.mdc-checkbox:not(.mdc-ripple-upgraded) .mdc-checkbox__ripple::after{transition:opacity 150ms linear}.mdc-checkbox:not(.mdc-ripple-upgraded):active .mdc-checkbox__ripple::after{transition-duration:75ms;opacity:0.12;opacity:var(--mdc-ripple-press-opacity, 0.12)}.mdc-checkbox.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: var(--mdc-ripple-press-opacity, 0.12)}.mdc-checkbox .mdc-checkbox__native-control:checked~.mdc-checkbox__background::before,.mdc-checkbox .mdc-checkbox__native-control:indeterminate~.mdc-checkbox__background::before,.mdc-checkbox .mdc-checkbox__native-control[data-indeterminate=true]~.mdc-checkbox__background::before{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__ripple::before,.mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__ripple::after{background-color:#018786;background-color:var(--mdc-ripple-color, var(--mdc-theme-secondary, #018786))}.mdc-checkbox.mdc-checkbox--selected:hover .mdc-checkbox__ripple::before,.mdc-checkbox.mdc-checkbox--selected.mdc-ripple-surface--hover .mdc-checkbox__ripple::before{opacity:0.04;opacity:var(--mdc-ripple-hover-opacity, 0.04)}.mdc-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded--background-focused .mdc-checkbox__ripple::before,.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):focus .mdc-checkbox__ripple::before{transition-duration:75ms;opacity:0.12;opacity:var(--mdc-ripple-focus-opacity, 0.12)}.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded) .mdc-checkbox__ripple::after{transition:opacity 150ms linear}.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):active .mdc-checkbox__ripple::after{transition-duration:75ms;opacity:0.12;opacity:var(--mdc-ripple-press-opacity, 0.12)}.mdc-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: var(--mdc-ripple-press-opacity, 0.12)}.mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected .mdc-checkbox__ripple::before,.mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected .mdc-checkbox__ripple::after{background-color:#018786;background-color:var(--mdc-ripple-color, var(--mdc-theme-secondary, #018786))}.mdc-checkbox .mdc-checkbox__background{top:11px;left:11px}.mdc-checkbox .mdc-checkbox__background::before{top:-13px;left:-13px;width:40px;height:40px}.mdc-checkbox .mdc-checkbox__native-control{top:0px;right:0px;left:0px;width:40px;height:40px}.mdc-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate):not([data-indeterminate=true])~.mdc-checkbox__background{border-color:rgba(0, 0, 0, 0.54);border-color:var(--mdc-checkbox-unchecked-color, rgba(0, 0, 0, 0.54));background-color:transparent}.mdc-checkbox .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background,.mdc-checkbox .mdc-checkbox__native-control:enabled:indeterminate~.mdc-checkbox__background,.mdc-checkbox .mdc-checkbox__native-control[data-indeterminate=true]:enabled~.mdc-checkbox__background{border-color:#018786;border-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786));background-color:#018786;background-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786))}@keyframes mdc-checkbox-fade-in-background-8A000000FF01878600000000FF018786{0%{border-color:rgba(0, 0, 0, 0.54);border-color:var(--mdc-checkbox-unchecked-color, rgba(0, 0, 0, 0.54));background-color:transparent}50%{border-color:#018786;border-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786));background-color:#018786;background-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786))}}@keyframes mdc-checkbox-fade-out-background-8A000000FF01878600000000FF018786{0%,80%{border-color:#018786;border-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786));background-color:#018786;background-color:var(--mdc-checkbox-checked-color, var(--mdc-theme-secondary, #018786))}100%{border-color:rgba(0, 0, 0, 0.54);border-color:var(--mdc-checkbox-unchecked-color, rgba(0, 0, 0, 0.54));background-color:transparent}}.mdc-checkbox.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__native-control:enabled~.mdc-checkbox__background,.mdc-checkbox.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__native-control:enabled~.mdc-checkbox__background{animation-name:mdc-checkbox-fade-in-background-8A000000FF01878600000000FF018786}.mdc-checkbox.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__native-control:enabled~.mdc-checkbox__background,.mdc-checkbox.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__native-control:enabled~.mdc-checkbox__background{animation-name:mdc-checkbox-fade-out-background-8A000000FF01878600000000FF018786}.mdc-checkbox .mdc-checkbox__native-control[disabled]:not(:checked):not(:indeterminate):not([data-indeterminate=true])~.mdc-checkbox__background{border-color:rgba(0, 0, 0, 0.38);border-color:var(--mdc-checkbox-disabled-color, rgba(0, 0, 0, 0.38));background-color:transparent}.mdc-checkbox .mdc-checkbox__native-control[disabled]:checked~.mdc-checkbox__background,.mdc-checkbox .mdc-checkbox__native-control[disabled]:indeterminate~.mdc-checkbox__background,.mdc-checkbox .mdc-checkbox__native-control[data-indeterminate=true][disabled]~.mdc-checkbox__background{border-color:transparent;background-color:rgba(0, 0, 0, 0.38);background-color:var(--mdc-checkbox-disabled-color, rgba(0, 0, 0, 0.38))}.mdc-checkbox .mdc-checkbox__native-control:enabled~.mdc-checkbox__background .mdc-checkbox__checkmark{color:#fff;color:var(--mdc-checkbox-ink-color, #fff)}.mdc-checkbox .mdc-checkbox__native-control:enabled~.mdc-checkbox__background .mdc-checkbox__mixedmark{border-color:#fff;border-color:var(--mdc-checkbox-ink-color, #fff)}.mdc-checkbox .mdc-checkbox__native-control:disabled~.mdc-checkbox__background .mdc-checkbox__checkmark{color:#fff;color:var(--mdc-checkbox-ink-color, #fff)}.mdc-checkbox .mdc-checkbox__native-control:disabled~.mdc-checkbox__background .mdc-checkbox__mixedmark{border-color:#fff;border-color:var(--mdc-checkbox-ink-color, #fff)}.mdc-touch-target-wrapper{display:inline}@keyframes mdc-checkbox-unchecked-checked-checkmark-path{0%,50%{stroke-dashoffset:29.7833385}50%{animation-timing-function:cubic-bezier(0, 0, 0.2, 1)}100%{stroke-dashoffset:0}}@keyframes mdc-checkbox-unchecked-indeterminate-mixedmark{0%,68.2%{transform:scaleX(0)}68.2%{animation-timing-function:cubic-bezier(0, 0, 0, 1)}100%{transform:scaleX(1)}}@keyframes mdc-checkbox-checked-unchecked-checkmark-path{from{animation-timing-function:cubic-bezier(0.4, 0, 1, 1);opacity:1;stroke-dashoffset:0}to{opacity:0;stroke-dashoffset:-29.7833385}}@keyframes mdc-checkbox-checked-indeterminate-checkmark{from{animation-timing-function:cubic-bezier(0, 0, 0.2, 1);transform:rotate(0deg);opacity:1}to{transform:rotate(45deg);opacity:0}}@keyframes mdc-checkbox-indeterminate-checked-checkmark{from{animation-timing-function:cubic-bezier(0.14, 0, 0, 1);transform:rotate(45deg);opacity:0}to{transform:rotate(360deg);opacity:1}}@keyframes mdc-checkbox-checked-indeterminate-mixedmark{from{animation-timing-function:mdc-animation-deceleration-curve-timing-function;transform:rotate(-45deg);opacity:0}to{transform:rotate(0deg);opacity:1}}@keyframes mdc-checkbox-indeterminate-checked-mixedmark{from{animation-timing-function:cubic-bezier(0.14, 0, 0, 1);transform:rotate(0deg);opacity:1}to{transform:rotate(315deg);opacity:0}}@keyframes mdc-checkbox-indeterminate-unchecked-mixedmark{0%{animation-timing-function:linear;transform:scaleX(1);opacity:1}32.8%,100%{transform:scaleX(0);opacity:0}}.mdc-checkbox{display:inline-block;position:relative;flex:0 0 18px;box-sizing:content-box;width:18px;height:18px;line-height:0;white-space:nowrap;cursor:pointer;vertical-align:bottom}@media screen and (-ms-high-contrast: active){.mdc-checkbox__native-control[disabled]:not(:checked):not(:indeterminate):not([data-indeterminate=true])~.mdc-checkbox__background{border-color:GrayText;border-color:var(--mdc-checkbox-disabled-color, GrayText);background-color:transparent}.mdc-checkbox__native-control[disabled]:checked~.mdc-checkbox__background,.mdc-checkbox__native-control[disabled]:indeterminate~.mdc-checkbox__background,.mdc-checkbox__native-control[data-indeterminate=true][disabled]~.mdc-checkbox__background{border-color:GrayText;background-color:transparent;background-color:var(--mdc-checkbox-disabled-color, transparent)}.mdc-checkbox__native-control:disabled~.mdc-checkbox__background .mdc-checkbox__checkmark{color:GrayText;color:var(--mdc-checkbox-ink-color, GrayText)}.mdc-checkbox__native-control:disabled~.mdc-checkbox__background .mdc-checkbox__mixedmark{border-color:GrayText;border-color:var(--mdc-checkbox-ink-color, GrayText)}.mdc-checkbox__mixedmark{margin:0 1px}}.mdc-checkbox--disabled{cursor:default;pointer-events:none}.mdc-checkbox__background{display:inline-flex;position:absolute;align-items:center;justify-content:center;box-sizing:border-box;width:18px;height:18px;border:2px solid currentColor;border-radius:2px;background-color:transparent;pointer-events:none;will-change:background-color,border-color;transition:background-color 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1),border-color 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1)}.mdc-checkbox__background .mdc-checkbox__background::before{background-color:#000;background-color:var(--mdc-theme-on-surface, #000)}.mdc-checkbox__checkmark{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;opacity:0;transition:opacity 180ms 0ms cubic-bezier(0.4, 0, 0.6, 1)}.mdc-checkbox--upgraded .mdc-checkbox__checkmark{opacity:1}.mdc-checkbox__checkmark-path{transition:stroke-dashoffset 180ms 0ms cubic-bezier(0.4, 0, 0.6, 1);stroke:currentColor;stroke-width:3.12px;stroke-dashoffset:29.7833385;stroke-dasharray:29.7833385}.mdc-checkbox__mixedmark{width:100%;height:0;transform:scaleX(0) rotate(0deg);border-width:1px;border-style:solid;opacity:0;transition:opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1),transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1)}.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__background,.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__background,.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__background,.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__background{animation-duration:180ms;animation-timing-function:linear}.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__checkmark-path{animation:mdc-checkbox-unchecked-checked-checkmark-path 180ms linear 0s;transition:none}.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__mixedmark{animation:mdc-checkbox-unchecked-indeterminate-mixedmark 90ms linear 0s;transition:none}.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__checkmark-path{animation:mdc-checkbox-checked-unchecked-checkmark-path 90ms linear 0s;transition:none}.mdc-checkbox--anim-checked-indeterminate .mdc-checkbox__checkmark{animation:mdc-checkbox-checked-indeterminate-checkmark 90ms linear 0s;transition:none}.mdc-checkbox--anim-checked-indeterminate .mdc-checkbox__mixedmark{animation:mdc-checkbox-checked-indeterminate-mixedmark 90ms linear 0s;transition:none}.mdc-checkbox--anim-indeterminate-checked .mdc-checkbox__checkmark{animation:mdc-checkbox-indeterminate-checked-checkmark 500ms linear 0s;transition:none}.mdc-checkbox--anim-indeterminate-checked .mdc-checkbox__mixedmark{animation:mdc-checkbox-indeterminate-checked-mixedmark 500ms linear 0s;transition:none}.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__mixedmark{animation:mdc-checkbox-indeterminate-unchecked-mixedmark 300ms linear 0s;transition:none}.mdc-checkbox__native-control:checked~.mdc-checkbox__background,.mdc-checkbox__native-control:indeterminate~.mdc-checkbox__background,.mdc-checkbox__native-control[data-indeterminate=true]~.mdc-checkbox__background{transition:border-color 90ms 0ms cubic-bezier(0, 0, 0.2, 1),background-color 90ms 0ms cubic-bezier(0, 0, 0.2, 1)}.mdc-checkbox__native-control:checked~.mdc-checkbox__background .mdc-checkbox__checkmark-path,.mdc-checkbox__native-control:indeterminate~.mdc-checkbox__background .mdc-checkbox__checkmark-path,.mdc-checkbox__native-control[data-indeterminate=true]~.mdc-checkbox__background .mdc-checkbox__checkmark-path{stroke-dashoffset:0}.mdc-checkbox__background::before{position:absolute;transform:scale(0, 0);border-radius:50%;opacity:0;pointer-events:none;content:"";will-change:opacity,transform;transition:opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1),transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1)}.mdc-checkbox__native-control:focus~.mdc-checkbox__background::before{transform:scale(1);opacity:.12;transition:opacity 80ms 0ms cubic-bezier(0, 0, 0.2, 1),transform 80ms 0ms cubic-bezier(0, 0, 0.2, 1)}.mdc-checkbox__native-control{position:absolute;margin:0;padding:0;opacity:0;cursor:inherit}.mdc-checkbox__native-control:disabled{cursor:default;pointer-events:none}.mdc-checkbox--touch{margin-top:4px;margin-bottom:4px;margin-right:4px;margin-left:4px}.mdc-checkbox--touch .mdc-checkbox__native-control{top:-4px;right:-4px;left:-4px;width:48px;height:48px}.mdc-checkbox__native-control:checked~.mdc-checkbox__background .mdc-checkbox__checkmark{transition:opacity 180ms 0ms cubic-bezier(0, 0, 0.2, 1),transform 180ms 0ms cubic-bezier(0, 0, 0.2, 1);opacity:1}.mdc-checkbox__native-control:checked~.mdc-checkbox__background .mdc-checkbox__mixedmark{transform:scaleX(1) rotate(-45deg)}.mdc-checkbox__native-control:indeterminate~.mdc-checkbox__background .mdc-checkbox__checkmark,.mdc-checkbox__native-control[data-indeterminate=true]~.mdc-checkbox__background .mdc-checkbox__checkmark{transform:rotate(45deg);opacity:0;transition:opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1),transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1)}.mdc-checkbox__native-control:indeterminate~.mdc-checkbox__background .mdc-checkbox__mixedmark,.mdc-checkbox__native-control[data-indeterminate=true]~.mdc-checkbox__background .mdc-checkbox__mixedmark{transform:scaleX(1) rotate(0deg);opacity:1}.mdc-checkbox.mdc-checkbox--upgraded .mdc-checkbox__background,.mdc-checkbox.mdc-checkbox--upgraded .mdc-checkbox__checkmark,.mdc-checkbox.mdc-checkbox--upgraded .mdc-checkbox__checkmark-path,.mdc-checkbox.mdc-checkbox--upgraded .mdc-checkbox__mixedmark{transition:none}:host{outline:none;display:inline-flex;-webkit-tap-highlight-color:transparent}.mdc-checkbox .mdc-checkbox__background::before{content:none}`;
+
+    /** @soyCompatible */
+    let Checkbox = class Checkbox extends CheckboxBase {
+    };
+    Checkbox.styles = style$6;
+    Checkbox = __decorate([
+        customElement('mwc-checkbox')
+    ], Checkbox);
+
+    var styles = css `
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  --mdc-theme-primary: black;
+}
+
+[hide] {
+  display: none !important;
+}
+[transparent] {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+#mainContainer {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#answer {
+  opacity: 1;
+  transition: opacity 1s linear;
+}
+
+#meaning {
+  font-size: 24px;
+  margin: 24px 0;
+  text-align: center;
+  width: 100%;
+  overflow: auto;
+  white-space: nowrap;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.setting-item > .desc {
+  padding: 0 20px 0 53px; 
+  border-sizing: border-box;
+  position: relative;
+  top: -7px;
+}
+
+`;
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+    /* global Reflect, Promise */
+
+    var extendStatics$3 = function(d, b) {
+        extendStatics$3 = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics$3(d, b);
+    };
+
+    function __extends$3(d, b) {
+        extendStatics$3(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    }
+
+    var __assign$3 = function() {
+        __assign$3 = Object.assign || function __assign(t) {
+            for (var s, i = 1, n = arguments.length; i < n; i++) {
+                s = arguments[i];
+                for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+            }
+            return t;
+        };
+        return __assign$3.apply(this, arguments);
+    };
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var cssPropertyNameMap = {
+        animation: {
+            prefixed: '-webkit-animation',
+            standard: 'animation',
+        },
+        transform: {
+            prefixed: '-webkit-transform',
+            standard: 'transform',
+        },
+        transition: {
+            prefixed: '-webkit-transition',
+            standard: 'transition',
+        },
+    };
+    var jsEventTypeMap = {
+        animationend: {
+            cssProperty: 'animation',
+            prefixed: 'webkitAnimationEnd',
+            standard: 'animationend',
+        },
+        animationiteration: {
+            cssProperty: 'animation',
+            prefixed: 'webkitAnimationIteration',
+            standard: 'animationiteration',
+        },
+        animationstart: {
+            cssProperty: 'animation',
+            prefixed: 'webkitAnimationStart',
+            standard: 'animationstart',
+        },
+        transitionend: {
+            cssProperty: 'transition',
+            prefixed: 'webkitTransitionEnd',
+            standard: 'transitionend',
+        },
+    };
+    function isWindow(windowObj) {
+        return Boolean(windowObj.document) && typeof windowObj.document.createElement === 'function';
+    }
+    function getCorrectPropertyName(windowObj, cssProperty) {
+        if (isWindow(windowObj) && cssProperty in cssPropertyNameMap) {
+            var el = windowObj.document.createElement('div');
+            var _a = cssPropertyNameMap[cssProperty], standard = _a.standard, prefixed = _a.prefixed;
+            var isStandard = standard in el.style;
+            return isStandard ? standard : prefixed;
+        }
+        return cssProperty;
+    }
+    function getCorrectEventName(windowObj, eventType) {
+        if (isWindow(windowObj) && eventType in jsEventTypeMap) {
+            var el = windowObj.document.createElement('div');
+            var _a = jsEventTypeMap[eventType], standard = _a.standard, prefixed = _a.prefixed, cssProperty = _a.cssProperty;
+            var isStandard = cssProperty in el.style;
+            return isStandard ? standard : prefixed;
+        }
+        return eventType;
+    }
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCFoundation$1 = /** @class */ (function () {
+        function MDCFoundation(adapter) {
+            if (adapter === void 0) { adapter = {}; }
+            this.adapter = adapter;
+        }
+        Object.defineProperty(MDCFoundation, "cssClasses", {
+            get: function () {
+                // Classes extending MDCFoundation should implement this method to return an object which exports every
+                // CSS class the foundation class needs as a property. e.g. {ACTIVE: 'mdc-component--active'}
+                return {};
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCFoundation, "strings", {
+            get: function () {
+                // Classes extending MDCFoundation should implement this method to return an object which exports all
+                // semantic strings as constants. e.g. {ARIA_ROLE: 'tablist'}
+                return {};
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCFoundation, "numbers", {
+            get: function () {
+                // Classes extending MDCFoundation should implement this method to return an object which exports all
+                // of its semantic numbers as constants. e.g. {ANIMATION_DELAY_MS: 350}
+                return {};
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCFoundation, "defaultAdapter", {
+            get: function () {
+                // Classes extending MDCFoundation may choose to implement this getter in order to provide a convenient
+                // way of viewing the necessary methods of an adapter. In the future, this could also be used for adapter
+                // validation.
+                return {};
+            },
+            enumerable: true,
+            configurable: true
+        });
+        MDCFoundation.prototype.init = function () {
+            // Subclasses should override this method to perform initialization routines (registering events, etc.)
+        };
+        MDCFoundation.prototype.destroy = function () {
+            // Subclasses should override this method to perform de-initialization routines (de-registering events, etc.)
+        };
+        return MDCFoundation;
+    }());
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var cssClasses$3 = {
+        ACTIVE: 'mdc-slider--active',
+        DISABLED: 'mdc-slider--disabled',
+        DISCRETE: 'mdc-slider--discrete',
+        FOCUS: 'mdc-slider--focus',
+        HAS_TRACK_MARKER: 'mdc-slider--display-markers',
+        IN_TRANSIT: 'mdc-slider--in-transit',
+        IS_DISCRETE: 'mdc-slider--discrete',
+        DISABLE_TOUCH_ACTION: 'mdc-slider--disable-touch-action',
+    };
+    var strings$3 = {
+        ARIA_DISABLED: 'aria-disabled',
+        ARIA_VALUEMAX: 'aria-valuemax',
+        ARIA_VALUEMIN: 'aria-valuemin',
+        ARIA_VALUENOW: 'aria-valuenow',
+        CHANGE_EVENT: 'MDCSlider:change',
+        INPUT_EVENT: 'MDCSlider:input',
+        PIN_VALUE_MARKER_SELECTOR: '.mdc-slider__pin-value-marker',
+        STEP_DATA_ATTR: 'data-step',
+        THUMB_CONTAINER_SELECTOR: '.mdc-slider__thumb-container',
+        TRACK_MARKER_CONTAINER_SELECTOR: '.mdc-slider__track-marker-container',
+        TRACK_SELECTOR: '.mdc-slider__track',
+    };
+    var numbers$2 = {
+        PAGE_FACTOR: 4,
+    };
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    // Accessing `window` without a `typeof` check will throw on Node environments.
+    var hasWindow = typeof window !== 'undefined';
+    var hasPointerEventSupport = hasWindow && !!window.PointerEvent;
+    var DOWN_EVENTS = hasPointerEventSupport ? ['pointerdown'] : ['mousedown', 'touchstart'];
+    var UP_EVENTS = hasPointerEventSupport ? ['pointerup'] : ['mouseup', 'touchend'];
+    var MOVE_EVENT_MAP = {
+        mousedown: 'mousemove',
+        pointerdown: 'pointermove',
+        touchstart: 'touchmove',
+    };
+    var KEY_IDS = {
+        ARROW_DOWN: 'ArrowDown',
+        ARROW_LEFT: 'ArrowLeft',
+        ARROW_RIGHT: 'ArrowRight',
+        ARROW_UP: 'ArrowUp',
+        END: 'End',
+        HOME: 'Home',
+        PAGE_DOWN: 'PageDown',
+        PAGE_UP: 'PageUp',
+    };
+    var MDCSliderFoundation = /** @class */ (function (_super) {
+        __extends$3(MDCSliderFoundation, _super);
+        function MDCSliderFoundation(adapter) {
+            var _this = _super.call(this, __assign$3(__assign$3({}, MDCSliderFoundation.defaultAdapter), adapter)) || this;
+            /**
+             * We set this to NaN since we want it to be a number, but we can't use '0' or
+             * '-1' because those could be valid tabindices set by the client code.
+             */
+            _this.savedTabIndex_ = NaN;
+            _this.active_ = false;
+            _this.inTransit_ = false;
+            _this.isDiscrete_ = false;
+            _this.hasTrackMarker_ = false;
+            _this.handlingThumbTargetEvt_ = false;
+            _this.min_ = 0;
+            _this.max_ = 100;
+            _this.step_ = 0;
+            _this.value_ = 0;
+            _this.disabled_ = false;
+            _this.preventFocusState_ = false;
+            _this.thumbContainerPointerHandler_ = function () { return _this.handlingThumbTargetEvt_ =
+                true; };
+            _this.interactionStartHandler_ = function (evt) {
+                return _this.handleDown_(evt);
+            };
+            _this.keydownHandler_ = function (evt) { return _this.handleKeydown_(evt); };
+            _this.focusHandler_ = function () { return _this.handleFocus_(); };
+            _this.blurHandler_ = function () { return _this.handleBlur_(); };
+            _this.resizeHandler_ = function () { return _this.layout(); };
+            return _this;
+        }
+        Object.defineProperty(MDCSliderFoundation, "cssClasses", {
+            get: function () {
+                return cssClasses$3;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCSliderFoundation, "strings", {
+            get: function () {
+                return strings$3;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCSliderFoundation, "numbers", {
+            get: function () {
+                return numbers$2;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(MDCSliderFoundation, "defaultAdapter", {
+            get: function () {
+                // tslint:disable:object-literal-sort-keys Methods should be in the same
+                // order as the adapter interface.
+                return {
+                    hasClass: function () { return false; },
+                    addClass: function () { return undefined; },
+                    removeClass: function () { return undefined; },
+                    getAttribute: function () { return null; },
+                    setAttribute: function () { return undefined; },
+                    removeAttribute: function () { return undefined; },
+                    computeBoundingRect: function () {
+                        return ({ top: 0, right: 0, bottom: 0, left: 0, width: 0, height: 0 });
+                    },
+                    getTabIndex: function () { return 0; },
+                    registerInteractionHandler: function () { return undefined; },
+                    deregisterInteractionHandler: function () { return undefined; },
+                    registerThumbContainerInteractionHandler: function () { return undefined; },
+                    deregisterThumbContainerInteractionHandler: function () { return undefined; },
+                    registerBodyInteractionHandler: function () { return undefined; },
+                    deregisterBodyInteractionHandler: function () { return undefined; },
+                    registerResizeHandler: function () { return undefined; },
+                    deregisterResizeHandler: function () { return undefined; },
+                    notifyInput: function () { return undefined; },
+                    notifyChange: function () { return undefined; },
+                    setThumbContainerStyleProperty: function () { return undefined; },
+                    setTrackStyleProperty: function () { return undefined; },
+                    setMarkerValue: function () { return undefined; },
+                    setTrackMarkers: function () { return undefined; },
+                    isRTL: function () { return false; },
+                };
+                // tslint:enable:object-literal-sort-keys
+            },
+            enumerable: true,
+            configurable: true
+        });
+        MDCSliderFoundation.prototype.init = function () {
+            var _this = this;
+            this.isDiscrete_ = this.adapter.hasClass(cssClasses$3.IS_DISCRETE);
+            this.hasTrackMarker_ = this.adapter.hasClass(cssClasses$3.HAS_TRACK_MARKER);
+            DOWN_EVENTS.forEach(function (evtName) {
+                _this.adapter.registerInteractionHandler(evtName, _this.interactionStartHandler_);
+                _this.adapter.registerThumbContainerInteractionHandler(evtName, _this.thumbContainerPointerHandler_);
+            });
+            if (hasPointerEventSupport) {
+                /*
+                 * When pointermove happens, if too much sliding happens, the browser
+                 * believes you are panning in the x direction and stops firing
+                 * pointermove events and supplies its own gestures. (similar to
+                 * preventing default on touchmove)
+                 */
+                this.adapter.addClass(cssClasses$3.DISABLE_TOUCH_ACTION);
+            }
+            this.adapter.registerInteractionHandler('keydown', this.keydownHandler_);
+            this.adapter.registerInteractionHandler('focus', this.focusHandler_);
+            this.adapter.registerInteractionHandler('blur', this.blurHandler_);
+            this.adapter.registerResizeHandler(this.resizeHandler_);
+            this.layout();
+            // At last step, provide a reasonable default value to discrete slider
+            if (this.isDiscrete_ && this.getStep() === 0) {
+                this.step_ = 1;
+            }
+        };
+        MDCSliderFoundation.prototype.destroy = function () {
+            var _this = this;
+            DOWN_EVENTS.forEach(function (evtName) {
+                _this.adapter.deregisterInteractionHandler(evtName, _this.interactionStartHandler_);
+                _this.adapter.deregisterThumbContainerInteractionHandler(evtName, _this.thumbContainerPointerHandler_);
+            });
+            this.adapter.deregisterInteractionHandler('keydown', this.keydownHandler_);
+            this.adapter.deregisterInteractionHandler('focus', this.focusHandler_);
+            this.adapter.deregisterInteractionHandler('blur', this.blurHandler_);
+            this.adapter.deregisterResizeHandler(this.resizeHandler_);
+        };
+        MDCSliderFoundation.prototype.setupTrackMarker = function () {
+            if (this.isDiscrete_ && this.hasTrackMarker_ && this.getStep() !== 0) {
+                this.adapter.setTrackMarkers(this.getStep(), this.getMax(), this.getMin());
+            }
+        };
+        MDCSliderFoundation.prototype.layout = function () {
+            this.rect_ = this.adapter.computeBoundingRect();
+            this.updateUIForCurrentValue_();
+        };
+        MDCSliderFoundation.prototype.getValue = function () {
+            return this.value_;
+        };
+        MDCSliderFoundation.prototype.setValue = function (value) {
+            this.setValue_(value, false);
+        };
+        MDCSliderFoundation.prototype.getMax = function () {
+            return this.max_;
+        };
+        MDCSliderFoundation.prototype.setMax = function (max) {
+            if (max < this.min_) {
+                throw new Error('Cannot set max to be less than the slider\'s minimum value');
+            }
+            this.max_ = max;
+            this.setValue_(this.value_, false, true);
+            this.adapter.setAttribute(strings$3.ARIA_VALUEMAX, String(this.max_));
+            this.setupTrackMarker();
+        };
+        MDCSliderFoundation.prototype.getMin = function () {
+            return this.min_;
+        };
+        MDCSliderFoundation.prototype.setMin = function (min) {
+            if (min > this.max_) {
+                throw new Error('Cannot set min to be greater than the slider\'s maximum value');
+            }
+            this.min_ = min;
+            this.setValue_(this.value_, false, true);
+            this.adapter.setAttribute(strings$3.ARIA_VALUEMIN, String(this.min_));
+            this.setupTrackMarker();
+        };
+        MDCSliderFoundation.prototype.getStep = function () {
+            return this.step_;
+        };
+        MDCSliderFoundation.prototype.setStep = function (step) {
+            if (step < 0) {
+                throw new Error('Step cannot be set to a negative number');
+            }
+            if (this.isDiscrete_ && (typeof (step) !== 'number' || step < 1)) {
+                step = 1;
+            }
+            this.step_ = step;
+            this.setValue_(this.value_, false, true);
+            this.setupTrackMarker();
+        };
+        MDCSliderFoundation.prototype.isDisabled = function () {
+            return this.disabled_;
+        };
+        MDCSliderFoundation.prototype.setDisabled = function (disabled) {
+            this.disabled_ = disabled;
+            this.toggleClass_(cssClasses$3.DISABLED, this.disabled_);
+            if (this.disabled_) {
+                this.savedTabIndex_ = this.adapter.getTabIndex();
+                this.adapter.setAttribute(strings$3.ARIA_DISABLED, 'true');
+                this.adapter.removeAttribute('tabindex');
+            }
+            else {
+                this.adapter.removeAttribute(strings$3.ARIA_DISABLED);
+                if (!isNaN(this.savedTabIndex_)) {
+                    this.adapter.setAttribute('tabindex', String(this.savedTabIndex_));
+                }
+            }
+        };
+        /**
+         * Called when the user starts interacting with the slider
+         */
+        MDCSliderFoundation.prototype.handleDown_ = function (downEvent) {
+            var _this = this;
+            if (this.disabled_) {
+                return;
+            }
+            this.preventFocusState_ = true;
+            this.setInTransit_(!this.handlingThumbTargetEvt_);
+            this.handlingThumbTargetEvt_ = false;
+            this.setActive_(true);
+            var moveHandler = function (moveEvent) {
+                _this.handleMove_(moveEvent);
+            };
+            var moveEventType = MOVE_EVENT_MAP[downEvent.type];
+            // Note: upHandler is [de]registered on ALL potential pointer-related
+            // release event types, since some browsers do not always fire these
+            // consistently in pairs. (See
+            // https://github.com/material-components/material-components-web/issues/1192)
+            var upHandler = function () {
+                _this.handleUp_();
+                _this.adapter.deregisterBodyInteractionHandler(moveEventType, moveHandler);
+                UP_EVENTS.forEach(function (evtName) { return _this.adapter.deregisterBodyInteractionHandler(evtName, upHandler); });
+            };
+            this.adapter.registerBodyInteractionHandler(moveEventType, moveHandler);
+            UP_EVENTS.forEach(function (evtName) {
+                return _this.adapter.registerBodyInteractionHandler(evtName, upHandler);
+            });
+            this.setValueFromEvt_(downEvent);
+        };
+        /**
+         * Called when the user moves the slider
+         */
+        MDCSliderFoundation.prototype.handleMove_ = function (evt) {
+            evt.preventDefault();
+            this.setValueFromEvt_(evt);
+        };
+        /**
+         * Called when the user's interaction with the slider ends
+         */
+        MDCSliderFoundation.prototype.handleUp_ = function () {
+            this.setActive_(false);
+            this.adapter.notifyChange();
+        };
+        /**
+         * Returns the clientX of the event
+         */
+        MDCSliderFoundation.prototype.getClientX_ = function (evt) {
+            if (evt.targetTouches &&
+                evt.targetTouches.length > 0) {
+                return evt.targetTouches[0].clientX;
+            }
+            return evt.clientX;
+        };
+        /**
+         * Sets the slider value from an event
+         */
+        MDCSliderFoundation.prototype.setValueFromEvt_ = function (evt) {
+            var clientX = this.getClientX_(evt);
+            var value = this.computeValueFromClientX_(clientX);
+            this.setValue_(value, true);
+        };
+        /**
+         * Computes the new value from the clientX position
+         */
+        MDCSliderFoundation.prototype.computeValueFromClientX_ = function (clientX) {
+            var _a = this, max = _a.max_, min = _a.min_;
+            var xPos = clientX - this.rect_.left;
+            var pctComplete = xPos / this.rect_.width;
+            if (this.adapter.isRTL()) {
+                pctComplete = 1 - pctComplete;
+            }
+            // Fit the percentage complete between the range [min,max]
+            // by remapping from [0, 1] to [min, min+(max-min)].
+            return min + pctComplete * (max - min);
+        };
+        /**
+         * Handles keydown events
+         */
+        MDCSliderFoundation.prototype.handleKeydown_ = function (evt) {
+            var keyId = this.getKeyId_(evt);
+            var value = this.getValueForKeyId_(keyId);
+            if (isNaN(value)) {
+                return;
+            }
+            // Prevent page from scrolling due to key presses that would normally scroll
+            // the page
+            evt.preventDefault();
+            this.adapter.addClass(cssClasses$3.FOCUS);
+            this.setValue_(value, true);
+            this.adapter.notifyChange();
+        };
+        /**
+         * Returns the computed name of the event
+         */
+        MDCSliderFoundation.prototype.getKeyId_ = function (kbdEvt) {
+            if (kbdEvt.key === KEY_IDS.ARROW_LEFT || kbdEvt.keyCode === 37) {
+                return KEY_IDS.ARROW_LEFT;
+            }
+            if (kbdEvt.key === KEY_IDS.ARROW_RIGHT || kbdEvt.keyCode === 39) {
+                return KEY_IDS.ARROW_RIGHT;
+            }
+            if (kbdEvt.key === KEY_IDS.ARROW_UP || kbdEvt.keyCode === 38) {
+                return KEY_IDS.ARROW_UP;
+            }
+            if (kbdEvt.key === KEY_IDS.ARROW_DOWN || kbdEvt.keyCode === 40) {
+                return KEY_IDS.ARROW_DOWN;
+            }
+            if (kbdEvt.key === KEY_IDS.HOME || kbdEvt.keyCode === 36) {
+                return KEY_IDS.HOME;
+            }
+            if (kbdEvt.key === KEY_IDS.END || kbdEvt.keyCode === 35) {
+                return KEY_IDS.END;
+            }
+            if (kbdEvt.key === KEY_IDS.PAGE_UP || kbdEvt.keyCode === 33) {
+                return KEY_IDS.PAGE_UP;
+            }
+            if (kbdEvt.key === KEY_IDS.PAGE_DOWN || kbdEvt.keyCode === 34) {
+                return KEY_IDS.PAGE_DOWN;
+            }
+            return '';
+        };
+        /**
+         * Computes the value given a keyboard key ID
+         */
+        MDCSliderFoundation.prototype.getValueForKeyId_ = function (keyId) {
+            var _a = this, max = _a.max_, min = _a.min_, step = _a.step_;
+            var delta = step || (max - min) / 100;
+            var valueNeedsToBeFlipped = this.adapter.isRTL() &&
+                (keyId === KEY_IDS.ARROW_LEFT || keyId === KEY_IDS.ARROW_RIGHT);
+            if (valueNeedsToBeFlipped) {
+                delta = -delta;
+            }
+            switch (keyId) {
+                case KEY_IDS.ARROW_LEFT:
+                case KEY_IDS.ARROW_DOWN:
+                    return this.value_ - delta;
+                case KEY_IDS.ARROW_RIGHT:
+                case KEY_IDS.ARROW_UP:
+                    return this.value_ + delta;
+                case KEY_IDS.HOME:
+                    return this.min_;
+                case KEY_IDS.END:
+                    return this.max_;
+                case KEY_IDS.PAGE_UP:
+                    return this.value_ + delta * numbers$2.PAGE_FACTOR;
+                case KEY_IDS.PAGE_DOWN:
+                    return this.value_ - delta * numbers$2.PAGE_FACTOR;
+                default:
+                    return NaN;
+            }
+        };
+        MDCSliderFoundation.prototype.handleFocus_ = function () {
+            if (this.preventFocusState_) {
+                return;
+            }
+            this.adapter.addClass(cssClasses$3.FOCUS);
+        };
+        MDCSliderFoundation.prototype.handleBlur_ = function () {
+            this.preventFocusState_ = false;
+            this.adapter.removeClass(cssClasses$3.FOCUS);
+        };
+        /**
+         * Sets the value of the slider
+         */
+        MDCSliderFoundation.prototype.setValue_ = function (value, shouldFireInput, force) {
+            if (force === void 0) { force = false; }
+            if (value === this.value_ && !force) {
+                return;
+            }
+            var _a = this, min = _a.min_, max = _a.max_;
+            var valueSetToBoundary = value === min || value === max;
+            if (this.step_ && !valueSetToBoundary) {
+                value = this.quantize_(value);
+            }
+            if (value < min) {
+                value = min;
+            }
+            else if (value > max) {
+                value = max;
+            }
+            value = value || 0; // coerce -0 to 0
+            this.value_ = value;
+            this.adapter.setAttribute(strings$3.ARIA_VALUENOW, String(this.value_));
+            this.updateUIForCurrentValue_();
+            if (shouldFireInput) {
+                this.adapter.notifyInput();
+                if (this.isDiscrete_) {
+                    this.adapter.setMarkerValue(value);
+                }
+            }
+        };
+        /**
+         * Calculates the quantized value
+         */
+        MDCSliderFoundation.prototype.quantize_ = function (value) {
+            var numSteps = Math.round(value / this.step_);
+            return numSteps * this.step_;
+        };
+        MDCSliderFoundation.prototype.updateUIForCurrentValue_ = function () {
+            var _this = this;
+            var _a = this, max = _a.max_, min = _a.min_, value = _a.value_;
+            var pctComplete = (value - min) / (max - min);
+            var translatePx = pctComplete * this.rect_.width;
+            if (this.adapter.isRTL()) {
+                translatePx = this.rect_.width - translatePx;
+            }
+            var transformProp = hasWindow ? getCorrectPropertyName(window, 'transform') : 'transform';
+            var transitionendEvtName = hasWindow ? getCorrectEventName(window, 'transitionend') : 'transitionend';
+            if (this.inTransit_) {
+                var onTransitionEnd_1 = function () {
+                    _this.setInTransit_(false);
+                    _this.adapter.deregisterThumbContainerInteractionHandler(transitionendEvtName, onTransitionEnd_1);
+                };
+                this.adapter.registerThumbContainerInteractionHandler(transitionendEvtName, onTransitionEnd_1);
+            }
+            requestAnimationFrame(function () {
+                // NOTE(traviskaufman): It would be nice to use calc() here,
+                // but IE cannot handle calcs in transforms correctly.
+                // See: https://goo.gl/NC2itk
+                // Also note that the -50% offset is used to center the slider thumb.
+                _this.adapter.setThumbContainerStyleProperty(transformProp, "translateX(" + translatePx + "px) translateX(-50%)");
+                _this.adapter.setTrackStyleProperty(transformProp, "scaleX(" + pctComplete + ")");
+            });
+        };
+        /**
+         * Toggles the active state of the slider
+         */
+        MDCSliderFoundation.prototype.setActive_ = function (active) {
+            this.active_ = active;
+            this.toggleClass_(cssClasses$3.ACTIVE, this.active_);
+        };
+        /**
+         * Toggles the inTransit state of the slider
+         */
+        MDCSliderFoundation.prototype.setInTransit_ = function (inTransit) {
+            this.inTransit_ = inTransit;
+            this.toggleClass_(cssClasses$3.IN_TRANSIT, this.inTransit_);
+        };
+        /**
+         * Conditionally adds or removes a class based on shouldBePresent
+         */
+        MDCSliderFoundation.prototype.toggleClass_ = function (className, shouldBePresent) {
+            if (shouldBePresent) {
+                this.adapter.addClass(className);
+            }
+            else {
+                this.adapter.removeClass(className);
+            }
+        };
+        return MDCSliderFoundation;
+    }(MDCFoundation$1));
+
+    const INPUT_EVENT = 'input';
+    const CHANGE_EVENT = 'change';
+    class SliderBase extends FormElement {
+        constructor() {
+            super(...arguments);
+            this.mdcFoundationClass = MDCSliderFoundation;
+            this.min = 0;
+            this.max = 100;
+            this._value = 0;
+            this.step = 0;
+            this.disabled = false;
+            this.pin = false;
+            this.markers = false;
+            this.pinMarkerText = '';
+            this.trackMarkerContainerStyles = {};
+            this.thumbContainerStyles = {};
+            this.trackStyles = {};
+            this.isFoundationDestroyed = false;
+        }
+        set value(value) {
+            if (this.mdcFoundation) {
+                this.mdcFoundation.setValue(value);
+            }
+            this._value = value;
+            this.requestUpdate('value', value);
+        }
+        get value() {
+            if (this.mdcFoundation) {
+                return this.mdcFoundation.getValue();
+            }
+            else {
+                return this._value;
+            }
+        }
+        // TODO(sorvell) #css: needs a default width
+        render() {
+            const isDiscrete = this.step !== 0;
+            const hostClassInfo = {
+                'mdc-slider--discrete': isDiscrete,
+                'mdc-slider--display-markers': this.markers && isDiscrete,
+            };
+            let markersTemplate = '';
+            if (isDiscrete && this.markers) {
+                markersTemplate = html `
+        <div
+            class="mdc-slider__track-marker-container"
+            style="${styleMap(this.trackMarkerContainerStyles)}">
+        </div>`;
+            }
+            let pin = '';
+            if (this.pin) {
+                pin = html `
+      <div class="mdc-slider__pin">
+        <span class="mdc-slider__pin-value-marker">${this.pinMarkerText}</span>
+      </div>`;
+            }
+            return html `
+      <div class="mdc-slider ${classMap(hostClassInfo)}"
+           tabindex="0" role="slider"
+           aria-valuemin="${this.min}" aria-valuemax="${this.max}"
+           aria-valuenow="${this.value}"
+           aria-disabled="${this.disabled.toString()}"
+           data-step="${this.step}"
+           @mousedown=${this.layout}
+           @touchstart=${this.layout}>
+        <div class="mdc-slider__track-container">
+          <div
+              class="mdc-slider__track"
+              style="${styleMap(this.trackStyles)}">
+          </div>
+          ${markersTemplate}
+        </div>
+        <div
+            class="mdc-slider__thumb-container"
+            style="${styleMap(this.thumbContainerStyles)}">
+          <!-- TODO: use cache() directive -->
+          ${pin}
+          <svg class="mdc-slider__thumb" width="21" height="21">
+            <circle cx="10.5" cy="10.5" r="7.875"></circle>
+          </svg>
+        <div class="mdc-slider__focus-ring"></div>
+      </div>
+    </div>`;
+        }
+        connectedCallback() {
+            super.connectedCallback();
+            if (this.mdcRoot && this.isFoundationDestroyed) {
+                this.isFoundationDestroyed = false;
+                this.mdcFoundation.init();
+            }
+        }
+        updated(changed) {
+            const minChanged = changed.has('min');
+            const maxChanged = changed.has('max');
+            if (minChanged && maxChanged) {
+                if (this.max < this.mdcFoundation.getMin()) {
+                    // for when min is above previous max
+                    this.mdcFoundation.setMin(this.min);
+                    this.mdcFoundation.setMax(this.max);
+                }
+                else {
+                    // for when max is below previous min
+                    this.mdcFoundation.setMax(this.max);
+                    this.mdcFoundation.setMin(this.min);
+                }
+            }
+            else if (minChanged) {
+                this.mdcFoundation.setMin(this.min);
+            }
+            else if (maxChanged) {
+                this.mdcFoundation.setMax(this.max);
+            }
+            super.updated(changed);
+        }
+        disconnectedCallback() {
+            super.disconnectedCallback();
+            this.isFoundationDestroyed = true;
+            this.mdcFoundation.destroy();
+        }
+        createAdapter() {
+            return Object.assign(Object.assign({}, addHasRemoveClass(this.mdcRoot)), { getAttribute: (name) => this.mdcRoot.getAttribute(name), setAttribute: (name, value) => this.mdcRoot.setAttribute(name, value), removeAttribute: (name) => this.mdcRoot.removeAttribute(name), computeBoundingRect: () => {
+                    const rect = this.mdcRoot.getBoundingClientRect();
+                    const myRect = {
+                        bottom: rect.bottom,
+                        height: rect.height,
+                        left: rect.left + window.pageXOffset,
+                        right: rect.right,
+                        top: rect.top,
+                        width: rect.width,
+                    };
+                    return myRect;
+                }, getTabIndex: () => this.mdcRoot.tabIndex, registerInteractionHandler: (type, handler) => {
+                    const init = type === 'touchstart' ? applyPassive() : undefined;
+                    this.mdcRoot.addEventListener(type, handler, init);
+                }, deregisterInteractionHandler: (type, handler) => this.mdcRoot.removeEventListener(type, handler), registerThumbContainerInteractionHandler: (type, handler) => {
+                    const init = type === 'touchstart' ? applyPassive() : undefined;
+                    this.thumbContainer.addEventListener(type, handler, init);
+                }, deregisterThumbContainerInteractionHandler: (type, handler) => this.thumbContainer.removeEventListener(type, handler), registerBodyInteractionHandler: (type, handler) => document.body.addEventListener(type, handler), deregisterBodyInteractionHandler: (type, handler) => document.body.removeEventListener(type, handler), registerResizeHandler: (handler) => window.addEventListener('resize', handler, applyPassive()), deregisterResizeHandler: (handler) => window.removeEventListener('resize', handler), notifyInput: () => {
+                    const value = this.mdcFoundation.getValue();
+                    if (value !== this._value) {
+                        this.value = value;
+                        this.dispatchEvent(new CustomEvent(INPUT_EVENT, { detail: this, composed: true, bubbles: true, cancelable: true }));
+                    }
+                }, notifyChange: () => {
+                    this.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: this, composed: true, bubbles: true, cancelable: true }));
+                }, setThumbContainerStyleProperty: (propertyName, value) => {
+                    this.thumbContainerStyles[propertyName] = value;
+                    this.requestUpdate();
+                }, setTrackStyleProperty: (propertyName, value) => {
+                    this.trackStyles[propertyName] = value;
+                    this.requestUpdate();
+                }, setMarkerValue: (value) => this.pinMarkerText =
+                    value.toLocaleString(), setTrackMarkers: (step, max, min) => {
+                    // calculates the CSS for the notches on the slider. Taken from
+                    // https://github.com/material-components/material-components-web/blob/8f851d9ed2f75dc8b8956d15b3bb2619e59fa8a9/packages/mdc-slider/component.ts#L122
+                    const stepStr = step.toLocaleString();
+                    const maxStr = max.toLocaleString();
+                    const minStr = min.toLocaleString();
+                    // keep calculation in css for better rounding/subpixel behavior
+                    const markerAmount = `((${maxStr} - ${minStr}) / ${stepStr})`;
+                    const markerWidth = '2px';
+                    const markerBkgdImage = `linear-gradient(to right, currentColor ${markerWidth}, transparent 0)`;
+                    const markerBkgdLayout = `0 center / calc((100% - ${markerWidth}) / ${markerAmount}) 100% repeat-x`;
+                    const markerBkgdShorthand = `${markerBkgdImage} ${markerBkgdLayout}`;
+                    this.trackMarkerContainerStyles['background'] = markerBkgdShorthand;
+                    this.requestUpdate();
+                }, isRTL: () => getComputedStyle(this.mdcRoot).direction === 'rtl' });
+        }
+        resetFoundation() {
+            if (this.mdcFoundation) {
+                this.mdcFoundation.destroy();
+                this.mdcFoundation.init();
+            }
+        }
+        async firstUpdated() {
+            await super.firstUpdated();
+            this.mdcFoundation.setValue(this._value);
+        }
+        /**
+         * Layout is called on mousedown / touchstart as the dragging animations of
+         * slider are calculated based off of the bounding rect which can change
+         * between interactions with this component, and this is the only location
+         * in the foundation that udpates the rects. e.g. scrolling horizontally
+         * causes adverse effects on the bounding rect vs mouse drag / touchmove
+         * location.
+         */
+        layout() {
+            this.mdcFoundation.layout();
+        }
+    }
+    __decorate([
+        query('.mdc-slider')
+    ], SliderBase.prototype, "mdcRoot", void 0);
+    __decorate([
+        query('.mdc-slider')
+    ], SliderBase.prototype, "formElement", void 0);
+    __decorate([
+        query('.mdc-slider__thumb-container')
+    ], SliderBase.prototype, "thumbContainer", void 0);
+    __decorate([
+        query('.mdc-slider__pin-value-marker')
+    ], SliderBase.prototype, "pinMarker", void 0);
+    __decorate([
+        property({ type: Number })
+    ], SliderBase.prototype, "min", void 0);
+    __decorate([
+        property({ type: Number })
+    ], SliderBase.prototype, "max", void 0);
+    __decorate([
+        property({ type: Number })
+    ], SliderBase.prototype, "value", null);
+    __decorate([
+        property({ type: Number }),
+        observer(function (value, old) {
+            const oldWasDiscrete = old !== 0;
+            const newIsDiscrete = value !== 0;
+            if (oldWasDiscrete !== newIsDiscrete) {
+                this.resetFoundation();
+            }
+            this.mdcFoundation.setStep(value);
+        })
+    ], SliderBase.prototype, "step", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true }),
+        observer(function (value) {
+            this.mdcFoundation.setDisabled(value);
+        })
+    ], SliderBase.prototype, "disabled", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true })
+    ], SliderBase.prototype, "pin", void 0);
+    __decorate([
+        property({ type: Boolean, reflect: true }),
+        observer(function () {
+            this.mdcFoundation.setupTrackMarker();
+        })
+    ], SliderBase.prototype, "markers", void 0);
+    __decorate([
+        property({ type: String })
+    ], SliderBase.prototype, "pinMarkerText", void 0);
+    __decorate([
+        property({ type: Object })
+    ], SliderBase.prototype, "trackMarkerContainerStyles", void 0);
+    __decorate([
+        property({ type: Object })
+    ], SliderBase.prototype, "thumbContainerStyles", void 0);
+    __decorate([
+        property({ type: Object })
+    ], SliderBase.prototype, "trackStyles", void 0);
+    __decorate([
+        eventOptions({ capture: true, passive: true })
+    ], SliderBase.prototype, "layout", null);
+
+    /**
+    @license
+    Copyright 2018 Google Inc. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    */
+    const style$7 = css `@keyframes mdc-slider-emphasize{0%{animation-timing-function:ease-out}50%{animation-timing-function:ease-in;transform:scale(0.85)}100%{transform:scale(0.571)}}.mdc-slider{position:relative;width:100%;height:48px;cursor:pointer;touch-action:pan-x;-webkit-tap-highlight-color:rgba(0,0,0,0)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track-container::after{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786);opacity:.26}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track-marker-container{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__thumb{fill:#018786;fill:var(--mdc-theme-secondary, #018786);stroke:#018786;stroke:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__focus-ring{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__pin{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__pin{color:#fff;color:var(--mdc-theme-text-primary-on-dark, white)}.mdc-slider--disable-touch-action{touch-action:none}.mdc-slider--disabled{cursor:auto}.mdc-slider--disabled .mdc-slider__track{background-color:#9a9a9a}.mdc-slider--disabled .mdc-slider__track-container::after{background-color:#9a9a9a;opacity:.26}.mdc-slider--disabled .mdc-slider__track-marker-container{background-color:#9a9a9a}.mdc-slider--disabled .mdc-slider__thumb{fill:#9a9a9a;stroke:#9a9a9a}.mdc-slider--disabled .mdc-slider__thumb{stroke:#fff;stroke:var(--mdc-slider-bg-color-behind-component, white)}.mdc-slider:focus{outline:none}.mdc-slider__track-container{position:absolute;top:50%;width:100%;height:2px;overflow:hidden}.mdc-slider__track-container::after{position:absolute;top:0;left:0;display:block;width:100%;height:100%;content:""}.mdc-slider__track{position:absolute;width:100%;height:100%;transform-origin:left top;will-change:transform}.mdc-slider[dir=rtl] .mdc-slider__track,[dir=rtl] .mdc-slider .mdc-slider__track{transform-origin:right top}.mdc-slider__track-marker-container{display:flex;margin-right:0;margin-left:-1px;visibility:hidden}.mdc-slider[dir=rtl] .mdc-slider__track-marker-container,[dir=rtl] .mdc-slider .mdc-slider__track-marker-container{margin-right:-1px;margin-left:0}.mdc-slider__track-marker-container::after{display:block;width:2px;height:2px;content:""}.mdc-slider__track-marker{flex:1}.mdc-slider__track-marker::after{display:block;width:2px;height:2px;content:""}.mdc-slider__track-marker:first-child::after{width:3px}.mdc-slider__thumb-container{position:absolute;top:15px;left:0;width:21px;height:100%;user-select:none;will-change:transform}.mdc-slider__thumb{position:absolute;top:0;left:0;transform:scale(0.571);stroke-width:3.5;transition:transform 100ms ease-out,fill 100ms ease-out,stroke 100ms ease-out}.mdc-slider__focus-ring{width:21px;height:21px;border-radius:50%;opacity:0;transition:transform 266.67ms ease-out,opacity 266.67ms ease-out,background-color 266.67ms ease-out}.mdc-slider__pin{display:flex;position:absolute;top:0;left:0;align-items:center;justify-content:center;width:26px;height:26px;margin-top:-2px;margin-left:-2px;transform:rotate(-45deg) scale(0) translate(0, 0);border-radius:50% 50% 50% 0%;z-index:1;transition:transform 100ms ease-out}.mdc-slider__pin-value-marker{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-family:Roboto, sans-serif;font-family:var(--mdc-typography-body2-font-family, var(--mdc-typography-font-family, Roboto, sans-serif));font-size:0.875rem;font-size:var(--mdc-typography-body2-font-size, 0.875rem);line-height:1.25rem;line-height:var(--mdc-typography-body2-line-height, 1.25rem);font-weight:400;font-weight:var(--mdc-typography-body2-font-weight, 400);letter-spacing:0.0178571429em;letter-spacing:var(--mdc-typography-body2-letter-spacing, 0.0178571429em);text-decoration:inherit;text-decoration:var(--mdc-typography-body2-text-decoration, inherit);text-transform:inherit;text-transform:var(--mdc-typography-body2-text-transform, inherit);transform:rotate(45deg)}.mdc-slider--active .mdc-slider__thumb{transform:scale3d(1, 1, 1)}.mdc-slider--focus .mdc-slider__thumb{animation:mdc-slider-emphasize 266.67ms linear}.mdc-slider--focus .mdc-slider__focus-ring{transform:scale3d(1.55, 1.55, 1.55);opacity:.25}.mdc-slider--in-transit .mdc-slider__thumb{transition-delay:140ms}.mdc-slider--in-transit .mdc-slider__thumb-container,.mdc-slider--in-transit .mdc-slider__track,.mdc-slider:focus:not(.mdc-slider--active) .mdc-slider__thumb-container,.mdc-slider:focus:not(.mdc-slider--active) .mdc-slider__track{transition:transform 80ms ease}.mdc-slider--discrete.mdc-slider--active .mdc-slider__thumb{transform:scale(calc(12 / 21))}.mdc-slider--discrete.mdc-slider--active .mdc-slider__pin{transform:rotate(-45deg) scale(1) translate(19px, -20px)}.mdc-slider--discrete.mdc-slider--focus .mdc-slider__thumb{animation:none}.mdc-slider--discrete.mdc-slider--display-markers .mdc-slider__track-marker-container{visibility:visible}:host{display:inline-block;min-width:120px;outline:none}`;
+
+    let Slider = class Slider extends SliderBase {
+    };
+    Slider.styles = style$7;
+    Slider = __decorate([
+        customElement('mwc-slider')
+    ], Slider);
+
     exports.AppContainer = class AppContainer extends LitElement {
         constructor() {
             super(...arguments);
             this.hanja = this.getRandomHanja();
             this.showHanja = false;
+            this.repeat = true;
+            this.repeatEvery = 2;
+            this.repeatCount = 0;
+            this.repeatList = [];
+            this.repeatedFeedback = false;
+            this.imgRollback = false;
         }
         get character() {
+            if (!this.hanja) {
+                return undefined;
+            }
             return this.hanja.s || this.hanja.t;
         }
         render() {
+            if (!this.hanja) {
+                return nothing;
+            }
             const c = this.character;
             return html `
-    <img src="https://hangulhanja.com/api/images/hanmuns/${c}.gif" width="230px"
-    @click="${this.onImgClick}">
-    <div id="meaning">${this.hanja.m}</div>
+    <div style="padding:6px;display:flex;justify-content:space-between;align-items:flex-start;">
+      <span ?transparent="${!this.repeatedFeedback}"
+        style="background-color:#e0e0e0;color:white;padding:7px;">repeated</span>
+      <mwc-icon-button icon="settings"
+        @click="${_ => this.settingsDialog.show()}"></mwc-icon-button>
+    </div>
 
-    <mwc-button icon="${!this.showHanja ? 'visibility' : 'arrow_forward'}" unelevated @click="${this.onButtonClick}">${this.showHanja ? 'next' : 'show'}</mwc-button>
+    <div id="mainContainer">
+      <div id="answer" ?transparent="${this.showHanja === false}">
+        <img id="hanjaImg" src="https://hangulhanja.com/api/images/hanmuns/${c}.gif" width="230px"
+          ?hide="${this.imgRollback}"
+          @click="${this.onImgClick}">
+        <div ?hide="${!this.imgRollback}" style="font-size:160px">${c}</div>
+      </div>
+
+      <div id="meaning">${this.hanja.m}</div>
+
+      <mwc-button icon="${!this.showHanja ? 'visibility' : 'arrow_forward'}" unelevated @click="${this.onButtonClick}">${this.showHanja ? 'next' : 'show'}</mwc-button>
+    </div>
+
+    <div style="height:200px;"></div>
+
+
+    <mwc-dialog id="settingsDialog" heading="Settings">
+      <div>
+        <div class="setting-item">
+          <mwc-formfield label="repeat words">
+            <mwc-checkbox ?checked="${this.repeat}"
+              @change="${e => this.repeat = e.target.checked}"></mwc-checkbox>
+          </mwc-formfield>
+          <div class="desc">Repeat hanjas you've already encountered.</div>
+        </div>
+
+        <div class="setting-item">
+          <mwc-slider step="1" min="1" max="10" markers pin
+            ?disabled="${!this.repeat}"
+            style="width:100%"
+            value="${this.repeatEvery}"
+            @input="${e => this.repeatEvery = e.detail.value}"></mwc-slider>          
+          <div class="desc">Every ${this.repeatEvery} hanjas.</div>
+        </div>
+      </div>
+
+      <mwc-button unelevated slot="secondaryAction"
+        style="--mdc-theme-primary: red"
+        @click="${this.clearCache}">clear cache</mwc-button>
+      <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
+    </mwc-dialog>
     `;
+        }
+        firstUpdated() {
+            // we save the first hanja in the list
+            this.repeatList.push(this.hanja);
+            // image rollback
+            this.shadowRoot.querySelector('#hanjaImg').onerror = () => {
+                this.imgRollback = true;
+            };
         }
         onButtonClick() {
             if (!this.showHanja) {
                 this.showHanja = true;
             }
             else {
-                this.showHanja = false;
-                this.hanja = this.getRandomHanja();
+                this.imgRollback = false;
+                this.newQuestion();
+            }
+        }
+        newQuestion() {
+            let hanja;
+            const previousHanja = this.hanja;
+            this.showHanja = false;
+            if (this.repeat) {
+                this.repeatCount++;
+            }
+            if (this.repeatCount > this.repeatEvery) {
+                this.repeatCount = 0;
+                // we grab a word from the list
+                // unless the list is empty
+                if (this.repeatList.length) {
+                    do {
+                        hanja = this.repeatList[Math.floor(Math.random() * this.repeatList.length)];
+                    } while (this.repeatList.length !== 1 && hanja === previousHanja);
+                    this.repeatedFeedback = true;
+                }
+            }
+            if (!hanja) {
+                do {
+                    hanja = this.getRandomHanja();
+                } while (hanja === previousHanja);
+                this.repeatedFeedback = false;
+            }
+            this.hanja = hanja;
+            if (this.repeat) {
+                this.repeatList.push(this.hanja);
             }
         }
         onImgClick() {
             window.open(`https://hangulhanja.com/hanja/${encodeURIComponent(this.hanja.t)}`, '_blank');
         }
         getRandomHanja() {
-            return data[Math.floor(Math.random() * data.length - 1)];
+            return data[Math.floor(Math.random() * data.length)];
+        }
+        clearCache() {
         }
     };
-    exports.AppContainer.styles = css `
-  :host {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    --mdc-theme-primary: black;
-  }
-
-  img {
-    opacity: 0;
-  }
-  :host([showHanja]) img {
-    opacity: 1;
-    transition: opacity 1s linear;
-  }
-
-  #meaning {
-    font-size: 24px;
-    margin: 24px 0;
-    text-align: center;
-  }
-
-
-  `;
+    exports.AppContainer.styles = styles;
     __decorate([
         property()
     ], exports.AppContainer.prototype, "hanja", void 0);
     __decorate([
         property({ type: Boolean, reflect: true })
     ], exports.AppContainer.prototype, "showHanja", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], exports.AppContainer.prototype, "repeat", void 0);
+    __decorate([
+        property({ type: Number })
+    ], exports.AppContainer.prototype, "repeatEvery", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], exports.AppContainer.prototype, "repeatedFeedback", void 0);
+    __decorate([
+        property({ type: Boolean })
+    ], exports.AppContainer.prototype, "imgRollback", void 0);
+    __decorate([
+        query('#settingsDialog')
+    ], exports.AppContainer.prototype, "settingsDialog", void 0);
     exports.AppContainer = __decorate([
         customElement('app-container')
     ], exports.AppContainer);
