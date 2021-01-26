@@ -101,6 +101,11 @@ export class AppContainer extends LitElement {
     // we save the first hanja in the list
     this.repeatList.push(this.hanja);
 
+    const _show = Dialog.prototype.show.bind(this.settingsDialog)
+    Dialog.prototype.show = function () {
+      _show();
+      setTimeout(() => this.querySelector('mwc-slider').layout(), 200)
+    }
 
     // image rollback
     this.shadowRoot.querySelector('#hanjaImg').onerror = () => {
