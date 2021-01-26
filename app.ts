@@ -9,6 +9,10 @@ import '@material/mwc-formfield';
 import '@material/mwc-checkbox';
 import styles from './styles';
 import '@material/mwc-slider';
+import '@material/mwc-snackbar';
+import {Snackbar} from '@material/mwc-snackbar';
+
+declare type Hanja = typeof data[number];
 
 @customElement('app-container')
 export class AppContainer extends LitElement {
@@ -27,13 +31,17 @@ export class AppContainer extends LitElement {
   @property({type:Boolean})
   imgRollback = false;
 
-  @query('#settingsDialog') settingsDialog!: Dialog;
+  metadatas = {};
+  @property({type:Object})
+  metadata;
+  @property({type:Boolean})
+  audioReady = false;
 
-  get character () {
-    if (!this.hanja) {
-      return undefined;
-    }
-    return this.hanja.s || this.hanja.t;
+  @query('#settingsDialog') settingsDialog!: Dialog;
+  @query('mwc-snackbar') snackbar!: Snackbar;
+
+  getCharacter (hanja: Hanja = this.hanja) {
+    return hanja.s || hanja.t;
   }
 
   static styles = styles;
@@ -43,21 +51,22 @@ export class AppContainer extends LitElement {
       return nothing
     }
 
-    const c = this.character;
+    const c = this.getCharacter();
 
     return html`
     <div style="padding:6px;display:flex;justify-content:space-between;align-items:flex-start;">
       <span ?transparent="${!this.repeatedFeedback}"
-        style="background-color:#e0e0e0;color:white;padding:7px;">repeated</span>
+        style="background-color:#e0e0e0;color:white;padding:7px;border-radius:4px;">repeated</span>
       <mwc-icon-button icon="settings"
         @click="${_ => this.settingsDialog.show()}"></mwc-icon-button>
     </div>
 
     <div id="mainContainer">
       <div id="answer" ?transparent="${this.showHanja === false}">
-        <img id="hanjaImg" src="https://hangulhanja.com/api/images/hanmuns/${c}.gif" width="230px"
-          ?hide="${this.imgRollback}"
-          @click="${this.onImgClick}">
+        <div ?hide="${this.imgRollback}" style="display:flex;justify-content:center;align-items:center;width:228px;height:228px;overflow:hidden">
+          <img id="hanjaImg" src="https://hangulhanja.com/api/images/hanmuns/${c}.gif" width="230px"
+            @click="${this.onImgClick}">
+        </div>
         <div ?hide="${!this.imgRollback}" style="font-size:160px">${c}</div>
       </div>
 
@@ -68,6 +77,11 @@ export class AppContainer extends LitElement {
 
     <div style="height:200px;"></div>
 
+    <mwc-snackbar> 
+      <mwc-button unelevated slot="action" ?disabled="${!this.audioReady}"
+        style="--mdc-theme-primary:#616161"
+        @click="${e => { e.stopPropagation(); this.playAudio()}}">Play</mwc-button>
+    </mwc-snackbar>
 
     <mwc-dialog id="settingsDialog" heading="Settings">
       <div>
@@ -100,12 +114,12 @@ export class AppContainer extends LitElement {
   firstUpdated () {
     // we save the first hanja in the list
     this.repeatList.push(this.hanja);
+    this.fetchHanjaMetadatas();
 
-    const _show = Dialog.prototype.show.bind(this.settingsDialog)
-    Dialog.prototype.show = function () {
-      _show();
-      setTimeout(() => this.querySelector('mwc-slider').layout(), 200)
-    }
+    this.settingsDialog.addEventListener('opened', () => {
+      this.shadowRoot.querySelector('mwc-slider').layout();
+    })
+
 
     // image rollback
     this.shadowRoot.querySelector('#hanjaImg').onerror = () => {
@@ -152,10 +166,27 @@ export class AppContainer extends LitElement {
 
     this.hanja = hanja;
 
+    // we start fetching the hanja's metadatas
+    this.fetchHanjaMetadatas();
+
     if (this.repeat) {
       this.repeatList.push(this.hanja);
     }
 
+  }
+
+  async fetchHanjaMetadatas (hanja: Hanja = this.hanja) { 
+    this.audioReady = false;
+    this.openSnackbar('Loading audio file...', -1);
+    const character = this.getCharacter(hanja);
+    if (!this.metadatas[character]) {
+      const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(this.getCharacter(hanja))}`);
+      this.metadatas[character] = await response.json();
+    }
+    this.metadata = this.metadatas[character];
+
+    this.snackbar.labelText = 'Audio ready');
+    this.audioReady = true;
   }
 
   onImgClick () {
@@ -164,6 +195,16 @@ export class AppContainer extends LitElement {
 
   private getRandomHanja () {
     return data[Math.floor(Math.random() * data.length)]
+  }
+
+  playAudio () {
+    new Audio(this.metadata.p[0].a).play();
+  }
+
+  openSnackbar (text, timeoutMs = 5000) {
+    this.snackbar.labelText = text;
+    this.snackbar.timeoutMs = timeoutMs;
+    this.snackbar.show();
   }
 
   clearCache() {
