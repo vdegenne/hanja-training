@@ -2,8 +2,6 @@ import { css } from 'lit-element';
 
 export default css`
 :host {
-  display: flex;
-  flex-direction: column;
   height: 100vh;
   --mdc-theme-primary: black;
 }

@@ -17270,8 +17270,6 @@
 
     var styles = css `
 :host {
-  display: flex;
-  flex-direction: column;
   height: 100vh;
   --mdc-theme-primary: black;
 }
@@ -18407,6 +18405,11 @@
         firstUpdated() {
             // we save the first hanja in the list
             this.repeatList.push(this.hanja);
+            const _show = Dialog.prototype.show.bind(this.settingsDialog);
+            Dialog.prototype.show = function () {
+                _show();
+                setTimeout(() => this.querySelector('mwc-slider').layout(), 200);
+            };
             // image rollback
             this.shadowRoot.querySelector('#hanjaImg').onerror = () => {
                 this.imgRollback = true;
