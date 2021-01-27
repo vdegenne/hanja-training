@@ -11,6 +11,8 @@ import styles from './styles';
 import '@material/mwc-slider';
 import '@material/mwc-snackbar';
 import {Snackbar} from '@material/mwc-snackbar';
+import '@material/mwc-circular-progress';
+import '@material/mwc-icon';
 
 declare type Hanja = typeof data[number];
 
@@ -72,21 +74,34 @@ export class AppContainer extends LitElement {
 
       <div id="meaning">${this.hanja.m}</div>
 
-      <mwc-button icon="${!this.showHanja ? 'visibility' : 'arrow_forward'}" unelevated @click="${this.onButtonClick}">${this.showHanja ? 'next' : 'show' }</mwc-button>
+      <mwc-button icon="${!this.showHanja ? 'visibility' : 'arrow_forward'}" raised @click="${this.onButtonClick}">${this.showHanja ? 'next' : 'reveal' }</mwc-button>
     </div>
 
     <div style="height:200px;"></div>
 
-    <mwc-snackbar> 
+    <mwc-snackbar>
+      <mwc-button unelevated slot="action" ?disabled="${!this.metadata}">
+        <mwc-icon ?hide="${!this.metadata}">remove_red_eye</mwc-icon>
+        <mwc-circular-progress
+          ?hide="${this.metadata}"
+          indeterminate
+          style="width:24px;"></mwc-circular-progress>
+      </mwc-button>
       <mwc-button unelevated slot="action" ?disabled="${!this.audioReady}"
-        style="--mdc-theme-primary:#616161"
-        @click="${e => { e.stopPropagation(); this.playAudio()}}">Play</mwc-button>
+        @click="${e => {e.stopPropagation(); this.playAudio()}}">
+        <mwc-icon ?hide="${!this.audioReady}">volume_up</mwc-icon>
+        <mwc-circular-progress
+          ?hide="${this.audioReady}"
+          indeterminate
+          style="width:24px;"></mwc-circular-progress>
+      </mwc-button>
     </mwc-snackbar>
 
-    <mwc-dialog id="settingsDialog" heading="Settings">
+    <mwc-dialog id="settingsDialog" heading="Settings"
+      @opened="${_ => this.shadowRoot.querySelector('mwc-slider').layout()}"> 
       <div>
         <div class="setting-item">
-          <mwc-formfield label="repeat words">
+          <mwc-formfield label="Repeat hanjas">
             <mwc-checkbox ?checked="${this.repeat}"
               @change="${e => this.repeat = e.target.checked}"></mwc-checkbox>
           </mwc-formfield>
@@ -104,7 +119,7 @@ export class AppContainer extends LitElement {
       </div>
 
       <mwc-button unelevated slot="secondaryAction"
-        style="--mdc-theme-primary: red"
+        style="--mdc-theme-primary: #ef5350"
         @click="${this.clearCache}">clear cache</mwc-button>
       <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
     </mwc-dialog>
@@ -116,15 +131,21 @@ export class AppContainer extends LitElement {
     this.repeatList.push(this.hanja);
     this.fetchHanjaMetadatas();
 
-    this.settingsDialog.addEventListener('opened', () => {
-      this.shadowRoot.querySelector('mwc-slider').layout();
-    })
-
+    // this.settingsDialog.addEventListener('opened', () => {
+    //   this.shadowRoot.querySelector('mwc-slider').layout();
+    // })
 
     // image rollback
     this.shadowRoot.querySelector('#hanjaImg').onerror = () => {
       this.imgRollback = true;
     }
+
+    // buttons icons in snackbar
+    this.snackbar.addEventListener('MDCSnackbar:opened', () => {
+      this.snackbar.querySelectorAll('mwc-button').forEach(b => {
+        b.shadowRoot.querySelector('.mdc-button__icon').style.marginRight = 0;
+      });
+    })
   }
 
   onButtonClick () {
@@ -176,8 +197,9 @@ export class AppContainer extends LitElement {
   }
 
   async fetchHanjaMetadatas (hanja: Hanja = this.hanja) { 
+    this.metadata = null;
     this.audioReady = false;
-    this.openSnackbar('Loading audio file...', -1);
+    this.openSnackbar('loading details...', -1);
     const character = this.getCharacter(hanja);
     if (!this.metadatas[character]) {
       const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(this.getCharacter(hanja))}`);
@@ -185,8 +207,11 @@ export class AppContainer extends LitElement {
     }
     this.metadata = this.metadatas[character];
 
-    this.snackbar.labelText = 'Audio ready');
-    this.audioReady = true;
+    this.snackbar.labelText = 'loading audios...');
+    setTimeout(() => {
+      this.audioReady = true
+      this.snackbar.labelText = 'data ready';
+    }, 2000);
   }
 
   onImgClick () {
