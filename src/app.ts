@@ -196,7 +196,9 @@ export class AppContainer extends LitElement {
       if (!settings.repeatOnly) {
         this.repeatCount++;
         if (this.repeatCount > settings.repeatEvery) {
-          this.repeatCount = 0;
+          if (this.repeatCount >= (settings.repeatEvery + (Math.min(settings.repeatLength, repeatList.length))) {
+            this.repeatCount = 0;
+          }
           // we grab a word from the list
           // unless the list is empty
           if (repeatList.length) {
