@@ -40,12 +40,6 @@ export default css`
   box-sizing: border-box;
 }
 
-.setting-item > .desc {
-  padding: 0 20px 0 53px; 
-  border-sizing: border-box;
-  position: relative;
-  top: -7px;
-}
 
 mwc-snackbar > snackbar-button {
   --mdc-theme-primary: #c7ac5a;

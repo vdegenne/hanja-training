@@ -1,6 +1,5 @@
-import { LitElement, customElement, property, html, css, query} from "lit-element"; 
-import { nothing } from 'lit-html';
-import data from './data.json';
+import { LitElement, customElement, property, html, css, query, PropertyValues} from "lit-element"; 
+import { nothing } from "lit-html";
 import '@material/mwc-button'
 import '@material/mwc-icon-button';
 import '@material/mwc-dialog';
@@ -14,11 +13,12 @@ import {Snackbar} from '@material/mwc-snackbar';
 import '@material/mwc-circular-progress';
 import '@material/mwc-icon';
 import './hanja-metadatas-dialog';
-import { HanjaMetadatas } from "./types";
+import { Hanja, HanjaMetadatas } from "./types";
 import { HanjaMetadatasDialog } from "./hanja-metadatas-dialog";
 import './snackbar-button';
-
-declare type Hanja = typeof data[number];
+import { settings, Settings } from './settings-manager';
+import data from './data.json';
+import { repeatList } from "./RepeatList";
 
 export let app: AppContainer;
 
@@ -28,14 +28,11 @@ export class AppContainer extends LitElement {
   hanja; // = this.getRandomHanja();
   @property({type: Boolean, reflect: true})
   revealed = false;
-  @property({ type: Boolean })
-  repeat = true;
-  @property({ type: Number })
-  repeatEvery = 2;
+
   repeatCount = 0;
-  repeatList: Hanja[] = [];
-  @property({type:Boolean})
-  repeatedFeedback = false;
+  @property()
+  repeatedFeedback = '';
+
   @property({type:Boolean})
   imgRollback = false;
 
@@ -45,8 +42,6 @@ export class AppContainer extends LitElement {
   @property({type:Boolean})
   audioReady = false;
 
-  
-  @query('#settingsDialog') settingsDialog!: Dialog;
   @query('mwc-snackbar') snackbar!: Snackbar;
   @query('hanja-metadatas-dialog') hanjaMetadatasDialog!: HanjaMetadatasDialog;
 
@@ -62,10 +57,6 @@ export class AppContainer extends LitElement {
   constructor () {
     super();
     app = this;
-    
-    if (localStorage.getItem('repeatList')) {
-      this.repeatList = JSON.parse(localStorage.getItem('repeatList')!.toString());
-    }
   }
 
   render () {
@@ -78,9 +69,9 @@ export class AppContainer extends LitElement {
     return html`
     <div style="padding:6px;display:flex;justify-content:space-between;align-items:flex-start;">
       <span ?transparent="${!this.repeatedFeedback}"
-        style="background-color:#a1887f;color:white;padding:7px;border-radius:4px;">repeated</span>
+        style="background-color:#a1887f;color:white;padding:7px;border-radius:4px;">${this.repeatedFeedback}</span>
       <mwc-icon-button icon="settings"
-        @click="${_ => this.settingsDialog.show()}"></mwc-icon-button>
+        @click="${_ => settings.show()}"></mwc-icon-button>
     </div>
 
     <div id="mainContainer">
@@ -94,7 +85,24 @@ export class AppContainer extends LitElement {
 
       <div id="meaning">${this.hanja && this.hanja.m}</div>
 
-      <mwc-button icon="${!this.revealed ? 'visibility' : 'arrow_forward'}" raised @click="${this.onButtonClick}">${this.revealed ? 'next' : 'reveal' }</mwc-button>
+      <div>
+        ${!this.revealed ? html`<mwc-button icon="visibility" raised @click="${this.reveal}">reveal</mwc-button>` : nothing}
+        
+        ${this.revealed && settings.repeat && !this.repeatedFeedback ? html`
+          <mwc-button icon="done" raised @click="${this.keep}">keep</mwc-button>
+          <mwc-button icon="arrow_forward" trailingIcon raised @click="${this.next}">pass</mwc-button>
+        ` : nothing}
+
+        ${this.revealed && settings.repeat && this.repeatedFeedback ? html`
+          <mwc-button icon="done" outlined @click="${this.iknow}" style="--mdc-theme-primary:#4caf50">i knew</mwc-button>
+          <mwc-button icon="clear" outlined @click="${this.idontknow}" style="--mdc-theme-primary:#f44336">i didn't know</mwc-button>
+        ` : nothing}
+
+      </div>
+
+      <div style="display:flex;align-items:center;margin: 10px 0 0 0;">
+        <mwc-icon>reorder</mwc-icon><span style="margin-left:5px">bag: ${repeatList.length}</span>
+      </div>
     </div>
 
     <div style="height:200px;"></div>
@@ -118,71 +126,64 @@ export class AppContainer extends LitElement {
       </snackbar-button>
     </mwc-snackbar>
 
-
-    <mwc-dialog id="settingsDialog" heading="Settings"
-      @opened="${() => this.shadowRoot!.querySelector('mwc-slider')!.layout()}"> 
-      <div>
-        <div class="setting-item">
-          <mwc-formfield label="Repeat hanjas">
-            <mwc-checkbox ?checked="${this.repeat}"
-              @change="${e => this.repeat = e.target.checked}"></mwc-checkbox>
-          </mwc-formfield>
-          <div class="desc">Repeat hanjas you've already encountered.</div>
-        </div>
-
-        <div class="setting-item">
-          <mwc-slider step="1" min="1" max="10" markers pin
-            ?disabled="${!this.repeat}"
-            style="width:100%"
-            value="${this.repeatEvery}"
-            @input="${e => this.repeatEvery = e.detail.value}"></mwc-slider>          
-          <div class="desc">Every ${this.repeatEvery} hanjas.</div>
-        </div>
-      </div>
-
-      <mwc-button unelevated slot="secondaryAction"
-        style="--mdc-theme-primary: #ef5350"
-        @click="${this.clearCache}">clear cache</mwc-button>
-      <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
-    </mwc-dialog>
+    ${settings}
 
     <hanja-metadatas-dialog .metadatas="${this.metadatas}"></hanja-metadatas-dialog>
     `;
   }
 
   firstUpdated () {
-    // we save the first hanja in the list
-    // this.repeatList.push(this.hanja);
-    // this.fetchHanjaMetadatas();
-
-    // this.settingsDialog.addEventListener('opened', () => {
-    //   this.shadowRoot.querySelector('mwc-slider').layout();
-    // })
-
     // image rollback
     (this.shadowRoot!.querySelector('#hanjaImg') as HTMLImageElement).onerror = () => {
       this.imgRollback = true;
     }
 
     // buttons icons in snackbar
-    this.snackbar.addEventListener('MDCSnackbar:opened', () => {
-      this.snackbar.querySelectorAll('mwc-button').forEach(b => {
-        b.constructor._styles.push(css`.mdc-button__icon { margin-right: 0 !important; }`);
-        // b.shadowRoot.querySelector('.mdc-button__icon').style.marginRight = 0;
-      });
-    })
+    // this.snackbar.addEventListener('MDCSnackbar:opened', () => {
+    //   this.snackbar.querySelectorAll('mwc-button').forEach(b => {
+    //     b.constructor._styles.push(css`.mdc-button__icon { margin-right: 0 !important; }`);
+    //     // b.shadowRoot.querySelector('.mdc-button__icon').style.marginRight = 0;
+    //   });
+    // })
 
     this.newQuestion();
+
+
+    settings.addEventListener('update', e => {
+      const detail: Map<keyof Settings, any> = (e as CustomEvent).detail;
+      if (detail.size > 1) {
+        return;
+      }
+
+      if (
+        detail.has('repeatOnly')
+        || (detail.has('repeat') && detail.get('repeat') === true && settings.repeatOnly === true && !this.repeatedFeedback)
+        || (detail.has('repeat') && detail.get('repeat') === false && this.repeatedFeedback)
+      ) {
+        this.next();
+      }
+    })
   }
 
-  onButtonClick () {
-    if  (!this.revealed) {
-      this.revealed = true;
-    }
-    else {
-      this.imgRollback = false;
-      this.newQuestion();
-    } 
+  reveal() {
+    this.revealed = true;
+  }
+
+  keep () {
+    repeatList.push(this.hanja);
+    this.next();
+  }
+
+  iknow () {
+    this.next();
+  }
+  idontknow () {
+    this.next();
+  }
+
+  next () {
+    this.imgRollback = false;
+    this.newQuestion();
   }
 
   newQuestion () {
@@ -191,30 +192,38 @@ export class AppContainer extends LitElement {
     const previousHanja = this.hanja;
     this.revealed = false;
 
-    if (this.repeat) {
-      this.repeatCount++;
-      if (this.repeatCount > this.repeatEvery) {
-        this.repeatCount = 0;
-        // we grab a word from the list
-        // unless the list is empty
-        if (this.repeatList.length) {
-          do {
-            hanja = this.repeatList[Math.floor(Math.random() * this.repeatList.length)]
-          } while (this.repeatList.length !== 1 && hanja === previousHanja);
-          this.repeatedFeedback = true;
+    if (settings.repeat) {
+      if (!settings.repeatOnly) {
+        this.repeatCount++;
+        if (this.repeatCount > settings.repeatEvery) {
+          this.repeatCount = 0;
+          // we grab a word from the list
+          // unless the list is empty
+          if (repeatList.length) {
+            do {
+              hanja = repeatList[Math.floor(Math.random() * repeatList.length)]
+            } while (repeatList.length !== 1 && hanja === previousHanja);
+            this.repeatedFeedback = 'repeated';
+          }
         }
+      }
+      else {
+        // repeat mode
+        this.repeatedFeedback = 'repeat mode';
+        do {
+          hanja = repeatList[Math.floor(Math.random() * repeatList.length)]
+        } while (hanja === previousHanja);
       }
     }
 
     if (!hanja) {
       do {
         hanja = this.getRandomHanja();
-      } while (hanja === previousHanja && this.repeatList.indexOf(hanja) >= 0);
-      this.repeatedFeedback = false;
-      if (this.repeat) {
-        this.repeatList.push(hanja);
-        this.saveRepeatList();
-      }
+      } while (hanja === previousHanja && repeatList.indexOf(hanja) >= 0);
+      this.repeatedFeedback = '';
+      // if (settings.repeat) {
+      //   repeatList.push(hanja);
+      // }
     }
 
     this.hanja = hanja;
@@ -229,7 +238,7 @@ export class AppContainer extends LitElement {
     this.openSnackbar('loading details...', -1);
     const character = this.getCharacter(hanja)!;
     if (!this.metadatasList[character]) {
-      const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(this.getCharacter(hanja))}`);
+      const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(this.getCharacter(hanja)!)}`);
       this.metadatasList[character] = await response.json();
     }
     this.metadatas = this.metadatasList[character];
@@ -261,13 +270,8 @@ export class AppContainer extends LitElement {
   }
 
   clearCache() {
-    this.repeatList = [];
+    repeatList.reset();
+    repeatList.save();
     this.repeatCount = 0;
-    this.saveRepeatList();
-  }
-
-  saveRepeatList () {
-    localStorage.setItem('repeatList', JSON.stringify(this.repeatList));
-    console.log(this.repeatList);
   }
 }
