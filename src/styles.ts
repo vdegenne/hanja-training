@@ -47,7 +47,7 @@ export default css`
   top: -7px;
 }
 
-mwc-snackbar > mwc-button {
+mwc-snackbar > snackbar-button {
   --mdc-theme-primary: #c7ac5a;
   margin-left: 5px;
 }

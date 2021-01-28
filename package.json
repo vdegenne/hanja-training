@@ -11,7 +11,8 @@
     "typescript": "^4.1.3"
   },
   "scripts": {
-    "watch": "rollup -cw"
+    "watch": "rollup -cw",
+    "build": "rollup -c"
   },
   "devDependencies": {
     "@material/mwc-checkbox": "^0.20.0",
