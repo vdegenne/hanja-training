@@ -19464,9 +19464,9 @@ mwc-snackbar > snackbar-button {
             this.newQuestion();
         }
         newQuestion() {
+            const previousHanja = this.hanja;
             this.hanja = undefined;
             let hanja;
-            const previousHanja = this.hanja;
             this.revealed = false;
             if (settings.repeat) {
                 if (!settings.repeatOnly) {

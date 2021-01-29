@@ -187,16 +187,16 @@ export class AppContainer extends LitElement {
   }
 
   newQuestion () {
+    const previousHanja = this.hanja;
     this.hanja = undefined;
     let hanja: Hanja|undefined;
-    const previousHanja = this.hanja;
     this.revealed = false;
 
     if (settings.repeat) {
       if (!settings.repeatOnly) {
         this.repeatCount++;
         if (this.repeatCount > settings.repeatEvery) {
-          if (this.repeatCount >= (settings.repeatEvery + (Math.min(settings.repeatLength, repeatList.length))) {
+          if (this.repeatCount >= (settings.repeatEvery + (Math.min(settings.repeatLength, repeatList.length)))) {
             this.repeatCount = 0;
           }
           // we grab a word from the list
