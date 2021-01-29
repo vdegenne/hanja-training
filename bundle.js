@@ -19465,7 +19465,7 @@ mwc-snackbar > snackbar-button {
         }
         newQuestion() {
             const previousHanja = this.hanja;
-            this.hanja = undefined;
+            this.hanja = undefined; // reset the img
             let hanja;
             this.revealed = false;
             if (settings.repeat) {
@@ -19520,6 +19520,7 @@ mwc-snackbar > snackbar-button {
             // setTimeout(() => {
             this.audioReady = true;
             this.snackbar.labelText = 'data ready';
+            this.playAudio();
             // }, 2000);
         }
         onImgClick() {

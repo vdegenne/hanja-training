@@ -188,7 +188,7 @@ export class AppContainer extends LitElement {
 
   newQuestion () {
     const previousHanja = this.hanja;
-    this.hanja = undefined;
+    this.hanja = undefined; // reset the img
     let hanja: Hanja|undefined;
     this.revealed = false;
 
@@ -249,6 +249,7 @@ export class AppContainer extends LitElement {
     // setTimeout(() => {
       this.audioReady = true
       this.snackbar.labelText = 'data ready';
+      this.playAudio();
     // }, 2000);
   }
 
