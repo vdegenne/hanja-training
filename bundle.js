@@ -9003,6 +9003,10 @@ mwc-snackbar > snackbar-button {
         </div>
         `;
             })}
+
+      <mwc-button unelevated slot="secondaryAction"
+        style="--mdc-theme-primary:#03c75a"
+        @click="${() => window.open(`https://hanja.dict.naver.com/hanja?q=${encodeURIComponent(this.metadatas.e)}`, '_blank')}">naver</mwc-button>
       <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
     `, this);
             }
