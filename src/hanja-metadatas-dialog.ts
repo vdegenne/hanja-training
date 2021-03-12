@@ -27,7 +27,7 @@ export class HanjaMetadatasDialog extends Dialog {
 
       <mwc-button unelevated slot="secondaryAction"
         style="--mdc-theme-primary:#03c75a"
-        @click="${() => window.open(`https://hanja.dict.naver.com/hanja?q=${encodeURIComponent(this.heading)}`, '_blank')}">naver</mwc-button>
+        @click="${() => window.open(`https://hanja.dict.naver.com/hanja?q=${encodeURIComponent(this.metadatas!.s)}`, '_blank')}">naver</mwc-button>
       <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
     `, this);
     }
