@@ -1,8 +1,12 @@
 import { settings } from './settings-manager';
 import {Hanja} from './types';
-import { app } from './app';
 
-class RepeatList extends Array<Hanja> {
+export type BagItem = {
+  hanja: Hanja;
+  score: number;
+}
+
+class RepeatList extends Array<BagItem> {
   constructor(...items) {
     super(...items);
     this.load();
@@ -15,6 +19,20 @@ class RepeatList extends Array<Hanja> {
     return ret;
   }
 
+  getLeastCountItems () {
+    if (this.length === 0) {
+      return [];
+    }
+    const least = Math.min(...this.map(item => item.score))
+    return this.filter(item => item.score === least)
+  }
+
+  addItem (hanja: Hanja) {
+    this.push({
+      hanja, count: 0
+    })
+  }
+
   load() {
     this.reset();
     if (localStorage.getItem('repeatList')) {
@@ -23,6 +41,9 @@ class RepeatList extends Array<Hanja> {
   }
 
   save() {
+    // when saving the list we know the structure has changed
+    // we should update the different views as well
+    window.app.bagDialog.requestUpdate()
     localStorage.setItem('repeatList', JSON.stringify(this));
   }
 
@@ -40,8 +61,8 @@ class RepeatList extends Array<Hanja> {
 
   async updateApp () {
     try {
-      app.requestUpdate()
-    } catch (e)
+      window.app.requestUpdate()
+    } catch (e) {}
   }
 }
 

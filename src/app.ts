@@ -4,6 +4,7 @@ import '@material/mwc-button'
 import '@material/mwc-icon-button';
 import '@material/mwc-dialog';
 import { Dialog } from '@material/mwc-dialog';
+import './bag-dialog'
 import '@material/mwc-formfield';
 import '@material/mwc-checkbox';
 import styles from './styles';
@@ -18,14 +19,20 @@ import { HanjaMetadatasDialog } from "./hanja-metadatas-dialog";
 import './snackbar-button';
 import { settings, Settings } from './settings-manager';
 import data from './data.json';
-import { repeatList } from "./RepeatList";
+import { BagItem, repeatList } from "./RepeatList";
+import {getCharacter} from './util'
+import { BagDialog } from "./bag-dialog";
 
-export let app: AppContainer;
+declare global {
+  interface Window {
+    app: AppContainer
+  }
+}
 
 @customElement('app-container')
 export class AppContainer extends LitElement {
-  @property()
-  hanja; // = this.getRandomHanja();
+  @property({type:Object})
+  bagItem?: BagItem; // = this.getRandomHanja();
   @property({type: Boolean, reflect: true})
   revealed = false;
 
@@ -44,27 +51,22 @@ export class AppContainer extends LitElement {
 
   @query('mwc-snackbar') snackbar!: Snackbar;
   @query('hanja-metadatas-dialog') hanjaMetadatasDialog!: HanjaMetadatasDialog;
+  @query('bag-dialog') bagDialog!: BagDialog;
 
-  getCharacter (hanja: Hanja = this.hanja) {
-    if (!hanja) {
-      return undefined;
-    }
-    return hanja.s || hanja.t;
+
+  constructor() {
+    super()
+    window.app = this
   }
 
   static styles = styles;
 
-  constructor () {
-    super();
-    app = this;
-  }
-
   render () {
-    // if (!this.hanja) {
-    //   return nothing
-    // }
+    if (!this.bagItem) {
+      return nothing;
+    }
 
-    const c = this.getCharacter();
+    const c = getCharacter(this.bagItem)
 
     return html`
     <div style="padding:6px;display:flex;justify-content:space-between;align-items:flex-start;">
@@ -75,15 +77,17 @@ export class AppContainer extends LitElement {
     </div>
 
     <div id="mainContainer">
-      <div id="answer" ?transparent="${this.revealed === false}">
+      <div id="answer" ?transparent="${this.revealed === false}"
+          @click="${this.onImgClick}">
         <div ?hide="${this.imgRollback}" style="display:flex;justify-content:center;align-items:center;width:228px;height:228px;overflow:hidden">
-          <img id="hanjaImg" src="${c ? `https://hangulhanja.com/api/images/hanmuns/${c}.gif` : ''}" width="230px"
-            @click="${this.onImgClick}">
+          <img id="hanjaImg"
+              src="${c ? `https://hangulhanja.com/api/images/hanmuns/${c}.gif` : ''}" width="230px"
+              @error="${() => this.imgRollback = true}">
         </div>
         <div ?hide="${!this.imgRollback}" style="font-size:160px">${c}</div>
       </div>
 
-      <div id="meaning">${this.hanja && this.hanja.m}</div>
+      <div id="meaning">${this.bagItem && this.bagItem.hanja && this.bagItem.hanja.m}</div>
 
       <div>
         ${!this.revealed ? html`<mwc-button icon="visibility" raised @click="${this.reveal}">reveal</mwc-button>` : nothing}
@@ -100,12 +104,15 @@ export class AppContainer extends LitElement {
 
       </div>
 
-      <div style="display:flex;align-items:center;margin: 10px 0 0 0;">
-        <mwc-icon>reorder</mwc-icon><span style="margin-left:5px">bag: ${repeatList.length}</span>
+      <div style="display:flex;align-items:center;margin: 10px 0 0 0;cursor:pointer">
+        <mwc-button outlined icon="reorder" dense
+          @click="${() => this.bagDialog.open()}">${repeatList.length} items</mwc-button>
       </div>
     </div>
 
     <div style="height:200px;"></div>
+
+    <bag-dialog></bag-dialog>
 
     <mwc-snackbar>
       <snackbar-button unelevated slot="action" ?disabled="${!this.metadatas}"
@@ -129,14 +136,15 @@ export class AppContainer extends LitElement {
     ${settings}
 
     <hanja-metadatas-dialog .metadatas="${this.metadatas}"></hanja-metadatas-dialog>
+
     `;
   }
 
   firstUpdated () {
     // image rollback
-    (this.shadowRoot!.querySelector('#hanjaImg') as HTMLImageElement).onerror = () => {
-      this.imgRollback = true;
-    }
+    // (this.shadowRoot!.querySelector('#hanjaImg') as HTMLImageElement).onerror = () => {
+    //   this.imgRollback = true;
+    // }
 
     // buttons icons in snackbar
     // this.snackbar.addEventListener('MDCSnackbar:opened', () => {
@@ -170,14 +178,18 @@ export class AppContainer extends LitElement {
   }
 
   keep () {
-    repeatList.push(this.hanja);
+    repeatList.push(this.bagItem);
     this.next();
   }
 
   iknow () {
+    this.bagItem!.score++;
+    repeatList.save()
     this.next();
   }
   idontknow () {
+    this.bagItem!.score--;
+    repeatList.save()
     this.next();
   }
 
@@ -187,9 +199,9 @@ export class AppContainer extends LitElement {
   }
 
   newQuestion () {
-    const previousHanja = this.hanja;
-    this.hanja = undefined; // reset the img
-    let hanja: Hanja|undefined;
+    const previousItem = this.bagItem;
+    this.bagItem = undefined; // reset the img
+    let bagItem: BagItem|undefined;
     this.revealed = false;
 
     if (settings.repeat) {
@@ -202,9 +214,10 @@ export class AppContainer extends LitElement {
           // we grab a word from the list
           // unless the list is empty
           if (repeatList.length) {
+            const items = repeatList.getLeastCountItems()
             do {
-              hanja = repeatList[Math.floor(Math.random() * repeatList.length)]
-            } while (repeatList.length !== 1 && hanja === previousHanja);
+              bagItem = items[Math.floor(Math.random() * items.length)]
+            } while (items.length !== 1 && previousItem && bagItem!.hanja === previousItem.hanja);
             this.repeatedFeedback = 'repeated';
           }
         }
@@ -212,35 +225,38 @@ export class AppContainer extends LitElement {
       else {
         // repeat mode
         this.repeatedFeedback = 'repeat mode';
+        const items = repeatList.getLeastCountItems()
         do {
-          hanja = repeatList[Math.floor(Math.random() * repeatList.length)]
-        } while (hanja === previousHanja);
+          bagItem = items[Math.floor(Math.random() * items.length)]
+        } while (previousItem && bagItem.hanja === previousItem.hanja);
       }
     }
 
-    if (!hanja) {
+    if (!bagItem) {
       do {
-        hanja = this.getRandomHanja();
-      } while (hanja === previousHanja && repeatList.indexOf(hanja) >= 0);
+        bagItem = this.getRandomItem();
+      } while (previousItem && bagItem.hanja === previousItem.hanja && repeatList.find(b => b.hanja === bagItem!.hanja));
       this.repeatedFeedback = '';
       // if (settings.repeat) {
       //   repeatList.push(hanja);
       // }
     }
 
-    this.hanja = hanja;
+    this.bagItem = bagItem;
 
     // we start fetching the hanja's metadatas
     this.fetchHanjaMetadatas();
+    console.log(repeatList);
   }
 
-  async fetchHanjaMetadatas (hanja: Hanja = this.hanja) { 
+  async fetchHanjaMetadatas (bagItem: BagItem = this.bagItem!) { 
     this.metadatas = undefined;
     this.audioReady = false;
+    await this.updateComplete
     this.openSnackbar('loading details...', -1);
-    const character = this.getCharacter(hanja)!;
+    const character = getCharacter(bagItem)!;
     if (!this.metadatasList[character]) {
-      const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(this.getCharacter(hanja)!)}`);
+      const response = await fetch(`https://assiets.vdegenne.com/api/words/chinese/${encodeURIComponent(getCharacter(bagItem)!)}`);
       this.metadatasList[character] = await response.json();
     }
     this.metadatas = this.metadatasList[character];
@@ -254,11 +270,14 @@ export class AppContainer extends LitElement {
   }
 
   onImgClick () {
-    window.open(`https://hangulhanja.com/hanja/${encodeURIComponent(this.hanja.t)}`, '_blank');
+    window.open(`https://hangulhanja.com/hanja/${encodeURIComponent(this.bagItem!.hanja.t)}`, '_blank');
   }
 
-  private getRandomHanja (): Hanja {
-    return data[Math.floor(Math.random() * data.length)]
+  private getRandomItem (): BagItem {
+    return {
+      hanja: data[Math.floor(Math.random() * data.length)],
+      score: 0
+    }
   }
 
   playAudio () {

@@ -1,7 +1,6 @@
 import { Dialog } from "@material/mwc-dialog";
 import { LitElement, html, property, customElement, query, css, PropertyValues } from "lit-element";
 import { nothing } from "lit-html";
-import { app } from "./app";
 import '@material/mwc-icon';
 import { repeatList } from "./RepeatList";
 
@@ -34,7 +33,7 @@ class SettingsManager extends LitElement {
     .setting-item .desc {
       font-size: 13px;
       padding: 0 20px 0 53px; 
-      border-sizing: border-box;
+      box-sizing: border-box;
       position: relative;
       top: -7px;
       color: grey;
@@ -65,7 +64,7 @@ class SettingsManager extends LitElement {
             ?disabled="${!this.repeat || this.repeatOnly}"
             style="width:100%"
             value="${this.repeatEvery}"
-            @input="${e => this.repeatEvery = e.detail.value}"></mwc-slider>          
+            @input="${e => this.repeatEvery = e.detail.value}"></mwc-slider>
           <div class="desc">Every : ${this.repeatEvery} hanjas.</div>
         </div>
 
@@ -143,7 +142,7 @@ class SettingsManager extends LitElement {
   }
 
   clearCache() {
-    app.clearCache();
+    window.app.clearCache();
     this.repeatOnly = false;
     this.adjustRepeatLength();
     // this.save();

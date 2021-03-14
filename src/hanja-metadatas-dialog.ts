@@ -4,7 +4,6 @@ import { render } from "lit-html";
 import { unsafeHTML } from "lit-html/directives/unsafe-html";
 import { HanjaMetadatas } from "./types";
 import '@material/mwc-button';
-import {app} from './app';
 
 @customElement('hanja-metadatas-dialog')
 export class HanjaMetadatasDialog extends Dialog {
@@ -13,7 +12,7 @@ export class HanjaMetadatasDialog extends Dialog {
 
   render () {
     if (this.metadatas) {
-      this.heading = app.revealed ? this.metadatas.s : 'metadatas';
+      this.heading = window.app.revealed ? this.metadatas.s : 'metadatas';
       render(html`
       <div style="margin: 7px 0 15px;">${this.metadatas.e}</div>
       ${this.metadatas.p.map((p, i) => {
