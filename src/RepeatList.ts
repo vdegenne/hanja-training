@@ -27,6 +27,10 @@ class RepeatList extends Array<BagItem> {
     return this.filter(item => item.score === least)
   }
 
+  static get [Symbol.species]() {
+    return Array;
+  }
+
   addItem (hanja: Hanja) {
     this.push({
       hanja, count: 0

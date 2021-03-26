@@ -6724,6 +6724,9 @@
             const least = Math.min(...this.map(item => item.score));
             return this.filter(item => item.score === least);
         }
+        static get [Symbol.species]() {
+            return Array;
+        }
         addItem(hanja) {
             this.push({
                 hanja, count: 0
