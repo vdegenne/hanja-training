@@ -3,13 +3,21 @@ import data from './data.json';
 export declare type Hanja = typeof data[number];
 
 export type HanjaMetadatas = {
-  e?: string; // english
-  p: { // pinyins
-    t: string; // text
-    a?: string; // audio
-    k?: string; // korean
+  /** english */
+  e?: string;
+  /** pinyins */
+  p: {
+    /** text */
+    t: string;
+    /** audio */
+    a?: string;
+    /** korean */
+    k?: string;
   }[],
-  s: string; // simplified
-  ts: string[]; // traditionals
-  v?: string[]; // variants
+  /* simplified */
+  s: string;
+  /* traditionals */
+  ts: string[];
+  /* variants */
+  v?: string[];
 }

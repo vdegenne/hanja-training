@@ -5,6 +5,8 @@ import {terser} from 'rollup-plugin-terser'
 
 export default {
   input: 'src/app.ts',
-  output: { file: 'bundle.js', format: 'iife'},
-  plugins: [resolve(), typescript(), json(), /*terser()*/]
+  output: { file: 'bundle.js', format: 'iife', sourcemap: true },
+  plugins: [resolve(), typescript({
+    // sourceMap: true
+  }), json(), /*terser()*/]
 }

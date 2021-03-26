@@ -18,6 +18,8 @@ export class BagDialog extends LitElement {
   .items {
     display: flex;
     flex-wrap: wrap;
+    width: 320px;
+    margin: 0 auto;
   }
   .item {
     display: flex;
@@ -25,6 +27,7 @@ export class BagDialog extends LitElement {
     position: relative;
     background: red;
     margin: 4px;
+    box-sizing: border-box;
   }
   .item > mwc-icon-button {
     position: absolute;
@@ -38,8 +41,8 @@ export class BagDialog extends LitElement {
     justify-content: center;
     align-items: center;
     font-size: 52px;
-    width: 100px;
-    height: 90px;
+    width: 90px;
+    height: 80px;
     padding: 12px 8px 0 0;
     background-color: #eeeeee;
   }
@@ -66,7 +69,7 @@ export class BagDialog extends LitElement {
       ${items.map(item => this.itemTemplate(item))}
       </div>
 
-      <mwc-button slot="primaryAction" dialogAction="close">close</mwc-button>
+      <mwc-button outlined slot="primaryAction" dialogAction="close">close</mwc-button>
     </mwc-dialog>
     `
   }

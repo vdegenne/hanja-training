@@ -1,4 +1,4 @@
-import { LitElement, customElement, property, html, css, query, PropertyValues} from "lit-element"; 
+import { LitElement, customElement, property, html, css, query, PropertyValues} from "lit-element";
 import { nothing } from "lit-html";
 import '@material/mwc-button'
 import '@material/mwc-icon-button';
@@ -53,7 +53,6 @@ export class AppContainer extends LitElement {
   @query('hanja-metadatas-dialog') hanjaMetadatasDialog!: HanjaMetadatasDialog;
   @query('bag-dialog') bagDialog!: BagDialog;
 
-
   constructor() {
     super()
     window.app = this
@@ -91,15 +90,15 @@ export class AppContainer extends LitElement {
 
       <div>
         ${!this.revealed ? html`<mwc-button icon="visibility" raised @click="${this.reveal}">reveal</mwc-button>` : nothing}
-        
+
         ${this.revealed && settings.repeat && !this.repeatedFeedback ? html`
           <mwc-button icon="done" raised @click="${this.keep}">keep</mwc-button>
           <mwc-button icon="arrow_forward" trailingIcon raised @click="${this.next}">pass</mwc-button>
         ` : nothing}
 
         ${this.revealed && settings.repeat && this.repeatedFeedback ? html`
-          <mwc-button icon="done" outlined @click="${this.iknow}" style="--mdc-theme-primary:#4caf50">i knew</mwc-button>
-          <mwc-button icon="clear" outlined @click="${this.idontknow}" style="--mdc-theme-primary:#f44336">i didn't know</mwc-button>
+          <mwc-button icon="done" outlined @click="${() => this.iknow()}" style="--mdc-theme-primary:#4caf50">i knew</mwc-button>
+          <mwc-button icon="clear" outlined @click="${() => this.idontknow()}" style="--mdc-theme-primary:#f44336">i didn't know</mwc-button>
         ` : nothing}
 
       </div>
@@ -249,7 +248,7 @@ export class AppContainer extends LitElement {
     console.log(repeatList);
   }
 
-  async fetchHanjaMetadatas (bagItem: BagItem = this.bagItem!) { 
+  async fetchHanjaMetadatas (bagItem: BagItem = this.bagItem!) {
     this.metadatas = undefined;
     this.audioReady = false;
     await this.updateComplete

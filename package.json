@@ -23,6 +23,7 @@
     "@material/mwc-icon-button": "^0.20.0",
     "@material/mwc-slider": "^0.20.0",
     "@material/mwc-snackbar": "^0.20.0",
-    "@material/mwc-textfield": "^0.20.0"
+    "@material/mwc-textfield": "^0.20.0",
+    "typedoc": "^0.20.34"
   }
 }
