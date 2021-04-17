@@ -8,5 +8,5 @@ export default {
   output: { file: 'bundle.js', format: 'iife', sourcemap: true },
   plugins: [resolve(), typescript({
     // sourceMap: true
-  }), json(), /*terser()*/]
+  }), json(), terser()]
 }

@@ -27,6 +27,12 @@ class RepeatList extends Array<BagItem> {
     return this.filter(item => item.score === least)
   }
 
+  getSortedList () {
+    const sorted = this.slice().sort((a, b) => a.score - b.score)
+    console.log(sorted)
+    return sorted;
+  }
+
   static get [Symbol.species]() {
     return Array;
   }

@@ -43,6 +43,8 @@ export class AppContainer extends LitElement {
   @property({type:Boolean})
   imgRollback = false;
 
+  private history: BagItem[] = [];
+
   metadatasList = {};
   @property({type:Object})
   metadatas?: HanjaMetadatas;
@@ -58,7 +60,29 @@ export class AppContainer extends LitElement {
     window.app = this
   }
 
-  static styles = styles;
+  static styles = [
+    styles,
+    css`
+    #keywords {
+      padding-bottom: 1px;
+      margin-bottom: 16px;
+      width:100%;
+      overflow-x: auto;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .keyword {
+      display: inline-block;
+      font-size: 15px;
+      background-color: #9e9e9e;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 5px;
+      margin: 2px;
+      white-space: nowrap;
+    }
+    `
+  ]
 
   render () {
     if (!this.bagItem) {
@@ -86,7 +110,9 @@ export class AppContainer extends LitElement {
         <div ?hide="${!this.imgRollback}" style="font-size:160px">${c}</div>
       </div>
 
-      <div id="meaning">${this.bagItem && this.bagItem.hanja && this.bagItem.hanja.m}</div>
+      <!-- <div id="keywords-wrapper"> -->
+        <div id="keywords">${this.keywordsTemplate(this.bagItem.hanja.m)}</div>
+      <!-- </div> -->
 
       <div>
         ${!this.revealed ? html`<mwc-button icon="visibility" raised @click="${this.reveal}">reveal</mwc-button>` : nothing}
@@ -137,6 +163,20 @@ export class AppContainer extends LitElement {
     <hanja-metadatas-dialog .metadatas="${this.metadatas}"></hanja-metadatas-dialog>
 
     `;
+  }
+
+  private keywordsTemplate (string: string) {
+    if (!string) { return nothing }
+    const contexts = string.split('|')
+    return html`
+      ${contexts.map((context, i) => {
+        return html`
+        ${context.split(/\/\/|\//g).map(word => {
+          return html`<span class="keyword">${word}</span>`
+        })}
+        ${i < context.length ? html`<br>` : nothing}`
+      })}
+    `
   }
 
   firstUpdated () {
@@ -198,7 +238,7 @@ export class AppContainer extends LitElement {
   }
 
   newQuestion () {
-    const previousItem = this.bagItem;
+    this.pushInHistory(this.bagItem)
     this.bagItem = undefined; // reset the img
     let bagItem: BagItem|undefined;
     this.revealed = false;
@@ -213,10 +253,13 @@ export class AppContainer extends LitElement {
           // we grab a word from the list
           // unless the list is empty
           if (repeatList.length) {
-            const items = repeatList.getLeastCountItems()
+            // const items = repeatList.getLeastCountItems()
+            const items = repeatList.getSortedList()
+            let i = 0;
             do {
-              bagItem = items[Math.floor(Math.random() * items.length)]
-            } while (items.length !== 1 && previousItem && bagItem!.hanja === previousItem.hanja);
+              bagItem = items[i]
+              i++;
+            } while (this.history.find(i => i.hanja === bagItem!.hanja))
             this.repeatedFeedback = 'repeated';
           }
         }
@@ -224,28 +267,35 @@ export class AppContainer extends LitElement {
       else {
         // repeat mode
         this.repeatedFeedback = 'repeat mode';
-        const items = repeatList.getLeastCountItems()
+        const items = repeatList.getSortedList()
+        let i = 0;
         do {
-          bagItem = items[Math.floor(Math.random() * items.length)]
-        } while (previousItem && bagItem.hanja === previousItem.hanja);
+          bagItem = items[i]
+          i++;
+        } while (this.history.find(i => i.hanja === bagItem!.hanja))
       }
     }
 
     if (!bagItem) {
       do {
         bagItem = this.getRandomItem();
-      } while (previousItem && bagItem.hanja === previousItem.hanja && repeatList.find(b => b.hanja === bagItem!.hanja));
+      } while (
+        this.history.length && this.history.find(i => i.hanja === bagItem!.hanja)
+        && repeatList.find(b => b.hanja === bagItem!.hanja)
+      );
       this.repeatedFeedback = '';
-      // if (settings.repeat) {
-      //   repeatList.push(hanja);
-      // }
     }
 
     this.bagItem = bagItem;
 
     // we start fetching the hanja's metadatas
     this.fetchHanjaMetadatas();
-    console.log(repeatList);
+  }
+
+  private pushInHistory (item?: BagItem) {
+    if (item === undefined) { return }
+    this.history.push(item)
+    this.history = this.history.slice(-4)
   }
 
   async fetchHanjaMetadatas (bagItem: BagItem = this.bagItem!) {
