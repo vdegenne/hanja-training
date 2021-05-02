@@ -32,7 +32,7 @@ class SettingsManager extends LitElement {
   static styles = css`
     .setting-item .desc {
       font-size: 13px;
-      padding: 0 20px 0 53px; 
+      padding: 0 20px 0 53px;
       box-sizing: border-box;
       position: relative;
       top: -7px;
@@ -49,7 +49,7 @@ class SettingsManager extends LitElement {
   render() {
     return html`
     <mwc-dialog id="settingsDialog" heading="Settings"
-      @opened="${() => this.shadowRoot!.querySelectorAll('mwc-slider').forEach(s => s.layout())}"> 
+      @opened="${() => this.shadowRoot!.querySelectorAll('mwc-slider').forEach(s => s.layout())}">
       <div>
         <div class="setting-item">
           <mwc-formfield label="Repeat hanjas">
@@ -73,7 +73,7 @@ class SettingsManager extends LitElement {
             ?disabled="${!this.repeat || this.repeatOnly}"
             style="width:100%"
             value="${this.repeatLength}"
-            @input="${e => this.repeatLength = e.detail.value}"></mwc-slider>          
+            @input="${e => this.repeatLength = e.detail.value}"></mwc-slider>
           <div class="desc">Length: repeat ${this.repeatLength} hanjas.</div>
         </div>
 
@@ -148,7 +148,8 @@ class SettingsManager extends LitElement {
     // this.save();
   }
 
-  adjustRepeatLength () {
+  async adjustRepeatLength () {
+    await new Promise(resolve => setTimeout(resolve, 3000))
     if (this.repeatLength > 5 && this.repeatLength > repeatList.length) {
       this.repeatLength = 5;
       this.save();
